@@ -3,6 +3,16 @@
   "commit": "2c726027da79e0e899ad482afead0a2000b03e61",
   "files": [
     {
+      "path": "contracts/fixtures/sites/page/invalid/image-data-url.json",
+      "source": "fixtures/sites/page/invalid/image-data-url.json",
+      "sha256": "a1414ef5fc6d8ff722099fe5e61e63d8de7bba7754d2fdb5fed74094a3271a7e"
+    },
+    {
+      "path": "contracts/fixtures/sites/page/invalid/link-javascript-url.json",
+      "source": "fixtures/sites/page/invalid/link-javascript-url.json",
+      "sha256": "76a5161a2a28a1f258b45ef362700f08cde4ef58513af4de56ab6300c4cee6e8"
+    },
+    {
       "path": "contracts/fixtures/sites/page/valid/with-callout.json",
       "source": "fixtures/sites/page/valid/with-callout.json",
       "sha256": "5482cddfc8034ec7ba287440aa6e1d752b0e17d3bab3001ba1b0d767c0ad22e6"

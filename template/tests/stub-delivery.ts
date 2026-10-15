@@ -9,12 +9,17 @@ import type { Page, Release } from '../../src/index.js';
 // the delivery routes under `/_r/` from the contract fixtures, as Edge would for an approved site.
 export interface StubDelivery {
   origin: string;
+  // The path of every request under `/_r/`, in arrival order.
+  requests: string[];
   close(): Promise<void>;
 }
 
 export interface StubOptions {
   siteDir: string;
   fixturesDir: string;
+  // More pages, by the slug that serves them, as a fixture path under `fixturesDir`. The invalid
+  // contract fixtures all use one slug, so a test names the slug that serves each of them.
+  extraPages?: Record<string, string>;
 }
 
 interface Answer {
@@ -37,13 +42,17 @@ const mediaTypes: Record<string, string> = {
   '.json': jsonType,
 };
 
-async function loadContent(fixturesDir: string): Promise<Content> {
+async function loadContent(options: StubOptions): Promise<Content> {
+  const { fixturesDir } = options;
   const release = await readFile(join(fixturesDir, 'sites/release/valid/minimal.json'), 'utf8');
   const pageDir = join(fixturesDir, 'sites/page/valid');
   const pages = new Map<string, string>();
   for (const name of await readdir(pageDir)) {
     const body = await readFile(join(pageDir, name), 'utf8');
     pages.set((JSON.parse(body) as Page).slug, body);
+  }
+  for (const [slug, path] of Object.entries(options.extraPages ?? {})) {
+    pages.set(slug, await readFile(join(fixturesDir, path), 'utf8'));
   }
   const site = (JSON.parse(release) as Release).site_id;
   return { prefix: `/_r/v1/sites/${site}/content/`, release, pages };
@@ -87,14 +96,18 @@ async function answer(
 }
 
 export async function startStubDelivery(options: StubOptions): Promise<StubDelivery> {
-  const content = await loadContent(options.fixturesDir);
+  const content = await loadContent(options);
+  const requests: string[] = [];
   const server: Server = createServer((req, res) => {
+    const path = new URL(req.url ?? '/', 'http://stub.invalid').pathname;
+    if (path.startsWith('/_r/')) requests.push(path);
     void answer({ ...options, content }, req).then((a) => send(res, a));
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const { port } = server.address() as AddressInfo;
   return {
     origin: `http://127.0.0.1:${port}`,
+    requests,
     close: () => new Promise<void>((resolve) => server.close(() => resolve())),
   };
 }

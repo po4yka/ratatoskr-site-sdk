@@ -27,6 +27,33 @@ NOT insert the `html` member of the page into the document.
   the `data-wikilink` attribute that only the `html` member carries, verified by
   `template/tests/fixture-release.test.ts` "a page renders from its ast"
 
+### Requirement: The template sets only allowed addresses from a page
+
+The template SHALL set `href` from a link URL only for the schemes `https`, `http` and `mailto`, and
+`src` from an image URL only for `https` and `http`. It SHALL render a link with another URL as its
+text, and an image with another URL as its alternative text, with no `href` and no `src`.
+
+#### Scenario: A page that the contract refuses reaches the template
+
+- **WHEN** the stub delivery API serves the contract fixtures `link-javascript-url.json` and
+  `image-data-url.json` as pages and the template opens them
+- **THEN** the page views contain no element with `href` or `src`, and the link text stays, verified
+  by `template/tests/fixture-release.test.ts` "a link or an image with a disallowed scheme renders
+  as text"
+
+### Requirement: The template reads only a slug of the contract grammar
+
+The template SHALL read a page only for a route slug of segments of lower-case ASCII letters, digits
+and `-`, separated by `/`, of at most 1024 characters. For any other route it SHALL show the
+not-found view and SHALL send no request.
+
+#### Scenario: A route with a dot or an empty segment
+
+- **WHEN** the template opens `#/..`, `#/../release`, `#/handbook/./start`, `#/handbook//start` or
+  `#/handbook/start/`
+- **THEN** it sends no request under `/_r/` and shows `This page does not exist.`, verified by
+  `template/tests/fixture-release.test.ts` "the route %s reads nothing and shows the not-found view"
+
 ### Requirement: The generated client matches the pinned contracts
 
 `@ratatoskr/site-sdk` SHALL expose a typed client for every route of the Content Delivery API,
