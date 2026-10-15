@@ -12,6 +12,8 @@ import { buildOutput, commit, failed, fakeCli, ok } from './fake-cli.js';
 // digest"): the publish step of the reusable bundle workflow, with a fake `oras`.
 const image = 'ghcr.io/owner/docs-site';
 const existing = `sha256:${'d'.repeat(64)}`;
+// What oras prints when the tag of this commit does not exist.
+const absentTag = `Error: ${image}:sha-${commit}: not found`;
 
 let dirs: string[] = [];
 
@@ -147,7 +149,7 @@ describe('the publish step', () => {
     await writeFile(join(dir, 'ratatoskr-bundle.json'), JSON.stringify(manifest));
     const cli = fakeCli({
       env: { GITHUB_SHA: commit },
-      exec: (call) => (call.args[0] === 'manifest' ? failed('Error: not found') : ok(existing)),
+      exec: (call) => (call.args[0] === 'manifest' ? failed(absentTag) : ok(existing)),
     });
 
     const code = await run(

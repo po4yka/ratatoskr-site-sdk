@@ -32,10 +32,15 @@ export interface PublishOptions {
 
 const digestPattern = /^sha256:[0-9a-f]{64}$/;
 
-// What `oras manifest fetch` prints when the registry has no such tag or no such repository. Any
-// other failure, such as a 500 or a refused login, says nothing about the tag, so the step stops
-// instead of pushing over a tag that may exist.
-const notFound = /\bnot found\b|\b(?:MANIFEST|NAME)_UNKNOWN\b|\bname unknown\b/i;
+// What `oras manifest fetch` prints when the registry has no such tag or no such repository: the
+// registry codes MANIFEST_UNKNOWN and NAME_UNKNOWN, or a line that ends with `<ref>: not found`.
+// Any other failure, such as a 500, a refused login or a missing credential helper, says nothing
+// about the tag, so the step stops instead of pushing over a tag that may exist.
+function saysNotFound(stderr: string, ref: string): boolean {
+  if (/\b(?:MANIFEST|NAME)_UNKNOWN\b/.test(stderr)) return true;
+  const escaped = ref.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(?:^|[\\s"])${escaped}: not found\\s*$`, 'm').test(stderr);
+}
 
 async function output(deps: CliDeps, values: Record<string, string>): Promise<void> {
   const file = deps.env.GITHUB_OUTPUT;
@@ -107,7 +112,7 @@ export async function publishBundle(options: PublishOptions, deps: CliDeps): Pro
     command: 'oras',
     args: ['manifest', 'fetch', '--descriptor', ref],
   });
-  if (found.code !== 0 && !notFound.test(found.stderr)) {
+  if (found.code !== 0 && !saysNotFound(found.stderr, ref)) {
     throw new CliError(`oras cannot tell whether ${ref} exists: ${found.stderr.trim()}`);
   }
   if (found.code === 0) {
