@@ -31,6 +31,8 @@ export interface SiteEventsOptions {
   wait?: (milliseconds: number) => Promise<void>;
   // The first pause before a reconnect. The stream can change it with a `retry` field.
   retryMs?: number;
+  // A number from 0 to 1 for the jitter of a pause. The default is `Math.random`.
+  random?: () => number;
 }
 
 export interface SiteEvents {

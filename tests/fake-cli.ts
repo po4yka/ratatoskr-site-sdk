@@ -20,6 +20,8 @@ export interface FakeCliOptions {
   fetch?: typeof fetch;
   env?: Record<string, string | undefined>;
   cwd?: string;
+  // The standard input of the command.
+  stdin?: string;
 }
 
 export const ok = (stdout = ''): ExecResult => ({ code: 0, stdout, stderr: '' });

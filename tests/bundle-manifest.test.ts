@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { readFile, rm } from 'node:fs/promises';
+import { readFile, rm, symlink } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
@@ -81,5 +81,17 @@ describe('the manifest step', () => {
     expect(code).not.toBe(0);
     expect(existsSync(join(dir, 'ratatoskr-bundle.json'))).toBe(false);
     expect(cli.err.join('\n')).toContain('GITHUB_SHA');
+  });
+
+  it('refuses a symbolic link in the build output', async () => {
+    dir = await buildOutput();
+    await symlink('/etc/passwd', join(dir, 'assets', 'passwd'));
+    const cli = fakeCli({ env: { GITHUB_SHA: commit } });
+
+    const code = await run(manifestStep('assets/**'), cli.deps);
+
+    expect(code).toBe(1);
+    expect(existsSync(join(dir, 'ratatoskr-bundle.json'))).toBe(false);
+    expect(cli.err.join('\n')).toContain('assets/passwd is not a regular file');
   });
 });

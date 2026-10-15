@@ -1,127 +1,28 @@
-import { createHash } from 'node:crypto';
-import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { ExecCall, ExecResult } from '../src/cli/deps.js';
 import { run } from '../src/cli/run.js';
-import { writeTar } from '../src/cli/tar.js';
-import { buildFiles, commit, failed, fakeCli, ok } from './fake-cli.js';
+import { commit, fakeCli } from './fake-cli.js';
+import {
+  api,
+  bundleTar,
+  deployTo,
+  device,
+  digest,
+  image,
+  repository,
+  signerWorkflow,
+  stubEdge,
+  tools,
+} from './fake-edge.js';
 
 // SITE-026 task 9.4 (workspace design D3, spec `site-bundles`): `ratatoskr-site deploy` verifies
 // the artifact on the machine where it runs before it sends a byte to Edge, and `login` keeps the
 // device secret in the credential store. The fake `oras`, the fake `gh` and the fake credential
 // store come from `fake-cli.ts`; the stub Edge is a `fetch` that records each request.
-const repository = 'owner/docs-site';
-const image = `ghcr.io/${repository}`;
-const digest = `sha256:${'e'.repeat(64)}`;
-const api = 'https://ratatoskr.example.test';
-const device = { api, device_id: '018f0000-0000-7000-8000-0000000000a1', device_secret: 'root-1' };
-const signerWorkflow = 'po4yka/ratatoskr-site-sdk/.github/workflows/reusable-site-bundle.yml';
-const later = '2026-10-15T21:00:00Z';
-
-// A bundle of the fixture build output whose manifest names `site`.
-function bundleTar(site: string): Uint8Array {
-  const files = Object.entries(buildFiles)
-    .map(([path, text]) => ({ path, bytes: Buffer.from(text) }))
-    .sort((a, b) => Buffer.compare(Buffer.from(a.path), Buffer.from(b.path)));
-  const manifest = {
-    site_id: site,
-    repository,
-    commit,
-    entry_document: 'index.html',
-    entry_fallback: true,
-    files: files.map(({ path, bytes }) => ({
-      path,
-      size_bytes: bytes.length,
-      sha256: createHash('sha256').update(bytes).digest('hex'),
-      hashed: path.startsWith('assets/'),
-    })),
-  };
-  const manifestBytes = Buffer.from(JSON.stringify(manifest, null, 2));
-  return writeTar([{ path: 'ratatoskr-bundle.json', bytes: manifestBytes }, ...files]);
-}
-
-// The fake `oras` and the fake `gh`: `oras pull` writes `bundle.tar` into its `-o` folder, and
-// `gh attestation verify` accepts the digest only when `attested` is true.
-function tools(bundle: { tar: Uint8Array; attested: boolean }) {
-  return async (call: ExecCall): Promise<ExecResult> => {
-    const [verb] = call.args;
-    if (call.command === 'oras' && verb === 'resolve') return ok(`${digest}\n`);
-    if (call.command === 'oras' && verb === 'pull') {
-      await writeFile(join(call.args[call.args.indexOf('-o') + 1] ?? '', 'bundle.tar'), bundle.tar);
-      return ok();
-    }
-    if (call.command === 'gh') {
-      return bundle.attested ? ok() : failed('Error: no attestation matches the digest');
-    }
-    return failed(`unexpected ${call.command}`);
-  };
-}
-
-interface EdgeRequest {
-  method: string;
-  path: string;
-  authorization: string | null;
-  contentType: string | null;
-  body: unknown;
-}
-
-const answers: Record<string, () => Response> = {
-  '/v1/devices/pair': () =>
-    Response.json(
-      {
-        ...device,
-        user_id: 'u-1',
-        credential: 'pairing-session',
-        expires_at: later,
-        refresh_token: 'refresh-1',
-        refresh_expires_at: later,
-      },
-      { status: 201 },
-    ),
-  '/v1/sessions/device': () =>
-    Response.json(
-      {
-        user_id: 'u-1',
-        device_id: device.device_id,
-        credential: 'device-session-1',
-        expires_at: later,
-        refresh_token: 'refresh-2',
-        refresh_expires_at: later,
-      },
-      { status: 201 },
-    ),
-  '/v1/sites/docs/deploys': () =>
-    Response.json(
-      { site_id: 'docs', commit, file_count: 6, size_bytes: 300, created: true },
-      { status: 201 },
-    ),
-  [`/v1/sites/docs/deploys/${commit}/activate`]: () =>
-    Response.json({ site_id: 'docs', current_commit: commit }),
-};
-
-function stubEdge() {
-  const requests: EdgeRequest[] = [];
-  const fetchImpl = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const url = new URL(String(input));
-    const headers = new Headers(init?.headers);
-    requests.push({
-      method: init?.method ?? 'GET',
-      path: url.pathname,
-      authorization: headers.get('authorization'),
-      contentType: headers.get('content-type'),
-      body: init?.body,
-    });
-    const answer = url.origin === api ? answers[url.pathname] : undefined;
-    return Promise.resolve(answer?.() ?? Response.json({ code: 'not_found' }, { status: 404 }));
-  };
-  return { fetch: fetchImpl as typeof fetch, requests };
-}
-
-const deployTo = (site: string) => ['deploy', '--site', site, '--commit', commit];
 
 let cwd: string | undefined;
 
@@ -196,6 +97,7 @@ describe('ratatoskr-site deploy', () => {
       commit,
       '--signer-workflow',
       signerWorkflow,
+      '--deny-self-hosted-runners',
     ]);
   });
 });

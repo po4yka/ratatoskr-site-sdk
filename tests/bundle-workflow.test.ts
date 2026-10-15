@@ -1,4 +1,5 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -108,5 +109,54 @@ describe('the publish step', () => {
     expect(cli.calls.map((call) => call.args[0])).toEqual(['manifest', 'push']);
     expect(code).toBe(0);
     expect(await readFile(githubOutput, 'utf8')).toContain(`digest=${pushed}\nattest=true\n`);
+  });
+
+  // SITE-026 review, low findings.
+  it('refuses an existing tag whose digest is not a sha256 digest', async () => {
+    const dir = await buildOutput();
+    dirs = [dir];
+    const cli = fakeCli({
+      env: { GITHUB_SHA: commit },
+      exec: () => ok(JSON.stringify({ digest: 'sha256:short' })),
+    });
+
+    const code = await run(
+      ['bundle', 'publish', '--dir', dir, '--image', image, '--commit', commit],
+      cli.deps,
+    );
+
+    expect(code).not.toBe(0);
+    expect(cli.out.join('\n')).not.toContain('already exists');
+  });
+
+  it('refuses a manifest path under _r/ before the push', async () => {
+    const dir = await buildOutput();
+    dirs = [dir];
+    await mkdir(join(dir, '_r'));
+    await writeFile(join(dir, '_r', 'x'), 'x');
+    // A manifest that lists `_r/x`, written by hand: the manifest step would refuse it.
+    const sha256 = createHash('sha256').update('x').digest('hex');
+    const manifest = {
+      site_id: 'docs',
+      repository: 'owner/docs-site',
+      commit,
+      entry_document: '_r/x',
+      entry_fallback: false,
+      files: [{ path: '_r/x', size_bytes: 1, sha256, hashed: false }],
+    };
+    await writeFile(join(dir, 'ratatoskr-bundle.json'), JSON.stringify(manifest));
+    const cli = fakeCli({
+      env: { GITHUB_SHA: commit },
+      exec: (call) => (call.args[0] === 'manifest' ? failed('Error: not found') : ok(existing)),
+    });
+
+    const code = await run(
+      ['bundle', 'publish', '--dir', dir, '--image', image, '--commit', commit],
+      cli.deps,
+    );
+
+    expect(cli.calls.map((call) => call.args[0])).toEqual(['manifest']);
+    expect(code).not.toBe(0);
+    expect(cli.err.join('\n')).toContain('_r/x');
   });
 });
