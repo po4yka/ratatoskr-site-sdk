@@ -3,16 +3,18 @@ import { parseArgs } from 'node:util';
 import { type ManifestOptions, writeBundleManifest } from './bundle-manifest.js';
 import { CliError } from './bundle-paths.js';
 import { publishBundle, type PublishOptions } from './bundle-publish.js';
-import { deploy } from './deploy.js';
+import { deploy, type DeployOptions } from './deploy.js';
 import type { CliDeps } from './deps.js';
-import { login } from './login.js';
+import { login, type LoginOptions } from './login.js';
 
 // `ratatoskr-site`: the steps of the reusable bundle workflow, and the commands of the owner.
 
 export const usage = `Usage:
   ratatoskr-site bundle manifest --dir <dir> --site <site> --repository <owner/name>
       --commit <sha> [--hashed-globs <glob,...>] [--entry-document <path>] [--no-entry-fallback]
-  ratatoskr-site bundle publish --dir <dir> --image <ghcr.io/owner/name> --commit <sha>`;
+  ratatoskr-site bundle publish --dir <dir> --image <ghcr.io/owner/name> --commit <sha>
+  ratatoskr-site login --pairing-code <code> --site <site> --api <https://edge>
+  ratatoskr-site deploy --site <site> --commit <sha> [--repository <owner/name>] [--no-activate]`;
 
 type Values = Record<string, string | boolean | undefined>;
 
@@ -59,11 +61,33 @@ function publishOptions(args: string[]): PublishOptions {
   };
 }
 
+function loginOptions(args: string[]): LoginOptions {
+  const values = options(args, { strings: ['pairing-code', 'site', 'api'] });
+  return {
+    pairingCode: required(values, 'pairing-code'),
+    site: required(values, 'site'),
+    api: required(values, 'api'),
+  };
+}
+
+function deployOptions(args: string[]): DeployOptions {
+  const values = options(args, {
+    strings: ['site', 'commit', 'repository'],
+    flags: ['no-activate'],
+  });
+  return {
+    site: required(values, 'site'),
+    commit: required(values, 'commit'),
+    repository: typeof values.repository === 'string' ? values.repository : undefined,
+    activate: values['no-activate'] !== true,
+  };
+}
+
 const commands: Record<string, (args: string[], deps: CliDeps) => Promise<number>> = {
   'bundle manifest': (args, deps) => writeBundleManifest(manifestOptions(args), deps),
   'bundle publish': (args, deps) => publishBundle(publishOptions(args), deps),
-  login,
-  deploy,
+  login: (args, deps) => login(loginOptions(args), deps),
+  deploy: (args, deps) => deploy(deployOptions(args), deps),
 };
 
 // The exit status: 0 on success, 1 when the command fails, and 2 for an unknown command.

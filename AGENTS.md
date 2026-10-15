@@ -17,6 +17,9 @@ A site is the owner's own repository. It is not a fleet repository. It depends o
 
 The package gives a site the contract types of a release and a page, and a typed client for the
 four delivery routes. The template is a site that builds with no change and renders a release.
+The package also gives the owner mode of SITE-027 (`src/owner/`, `src/live/`), and the bundle
+workflow and the command `ratatoskr-site` of SITE-026 (`.github/workflows/reusable-site-bundle.yml`,
+`src/cli/`).
 
 Core principles:
 

@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 
 import { CliError } from './bundle-paths.js';
+import { systemCredentials } from './credentials.js';
 import type { CliDeps, ExecCall, ExecResult } from './deps.js';
 
 // The real environment of `ratatoskr-site`: processes, `fetch`, the process environment and the
@@ -23,10 +24,7 @@ export function nodeDeps(): CliDeps {
   return {
     exec,
     fetch: globalThis.fetch.bind(globalThis),
-    credentials: {
-      get: () => Promise.reject(new CliError('This version keeps no credential.')),
-      set: () => Promise.reject(new CliError('This version keeps no credential.')),
-    },
+    credentials: systemCredentials(exec, process.platform),
     env: process.env,
     cwd: process.cwd(),
     out: (line) => process.stdout.write(`${line}\n`),

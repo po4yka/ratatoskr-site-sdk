@@ -24,7 +24,10 @@ publications at run time through the anonymous Content Delivery API (workspace c
 - The package also gives a site the owner mode of SITE-027 (`add-site-owner-editing-and-live`): the
   owner sign-in, the live event stream and the editing helpers. See "Owner mode" below. Their
   types come from the Platform API description and from `sites/site-event.v1`.
-- Hosting a site on the Ratatoskr host comes with SITE-026 (`add-site-gateway-hosting`).
+- The package also gives a site its hosting on the Ratatoskr host (SITE-026,
+  `add-site-gateway-hosting`): the reusable workflow `reusable-site-bundle.yml`, which publishes an
+  attested bundle per commit, and the command `ratatoskr-site` with `login` and `deploy`. See
+  "Publish and deploy a site" below.
 
 ## Start a site from the template
 
@@ -156,3 +159,50 @@ for example 403 `edge.capability_not_granted` when the approval does not grant t
 
 An edit does not publish anything. A publication with the release mode `automatic` builds a new
 release from the change; with `manual`, visitors see the previous release until you request one.
+
+## Publish and deploy a site
+
+A site is served on the Ratatoskr host from a static bundle: a tar archive of the build output with
+`ratatoskr-bundle.json` (contract `sites/bundle-manifest.v1`) at its root. The manifest lists every
+file with its size and SHA-256, and marks the content-hashed files, which the gateway caches for a
+year.
+
+1. **Publish a bundle per commit.** Call the reusable workflow from the site repository on a push
+   to its default branch. Pin it to a commit of this repository, and keep `@ratatoskr/site-sdk` in
+   the site's lockfile at the same version, because the workflow runs the steps of that package:
+
+   ```yaml
+   on:
+     push:
+       branches: [main]
+   permissions: {}
+   jobs:
+     bundle:
+       permissions:
+         contents: read
+         packages: write
+         id-token: write
+         attestations: write
+       uses: po4yka/ratatoskr-site-sdk/.github/workflows/reusable-site-bundle.yml@<commit>
+       with:
+         site-id: docs
+   ```
+
+   The workflow builds the site (`build-command`, default `npm run build`, into `output-dir`,
+   default `dist`), writes the manifest (`ratatoskr-site bundle manifest`) and refuses a commit that
+   is not `GITHUB_SHA`. It then pushes the tar to `ghcr.io/<owner>/<repository>:sha-<commit>` with
+   `oras` (`ratatoskr-site bundle publish`) and attests the pushed digest. A tag that exists is
+   never pushed again. `hashed-globs` (default `assets/**`) names the content-hashed files.
+2. **Pair the deploy command once.** In the web client, make a pairing code with the expected kind
+   `site_deployer` for the site. On the machine that deploys, run
+   `npx ratatoskr-site login --pairing-code <code> --site docs --api https://<edge>`. The command
+   keeps the device secret in the credential store of the system (the macOS keychain, or the Secret
+   Service through `secret-tool` on Linux), never in the site repository. You can revoke the device
+   in the device list of the web client.
+3. **Deploy a commit.** Run `npx ratatoskr-site deploy --site docs --commit <sha>` in the site
+   repository. It needs `oras` and `gh`. It verifies the attestation of the artifact against the
+   site repository, the commit and the reusable workflow, and checks every file against the
+   manifest, before it sends a byte to Ratatoskr. Then it uploads the bundle and activates it. With
+   `--no-activate` it uploads only; deploy the same commit again to activate it later. To roll
+   back, deploy the previous commit: the host keeps it, so nothing is downloaded again.
+   `--repository owner/name` names the repository when the remote `origin` is not on GitHub.
