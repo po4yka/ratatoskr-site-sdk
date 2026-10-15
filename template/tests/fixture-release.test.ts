@@ -58,4 +58,19 @@ describe('the starter template', () => {
       ['Start here', '#/handbook/start'],
     ]);
   });
+
+  it('a page renders from its ast', async () => {
+    const start = await open('/#/handbook/start');
+    expect(start.querySelector('#app h1')?.textContent).toBe('Start here');
+    expect(start.querySelector('#app .callout-title')?.textContent).toBe('Before you read');
+
+    const links = await open('/#/handbook/links');
+    const wikiLink = [...links.querySelectorAll('#app a')].find(
+      (a) => a.textContent === 'the start',
+    );
+    expect(wikiLink?.getAttribute('href')).toBe('#/handbook/start');
+    // Only the `html` member of the page carries this attribute, so its absence shows that the
+    // view was built from the `ast`.
+    expect(links.querySelector('[data-wikilink]')).toBeNull();
+  });
 });
