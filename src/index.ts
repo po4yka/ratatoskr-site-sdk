@@ -37,6 +37,7 @@ export type {
   DeliveryPage,
   DeliveryRelease,
   ErrorEnvelope,
+  HeadAnswer,
   ReadOptions,
   SearchQuery,
   SearchResult,

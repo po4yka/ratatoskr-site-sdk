@@ -62,9 +62,7 @@ bundle that a site would deploy, and it needs no browser download.
 - [The lock proves that the files did not change here, not that they equal the contracts commit] →
   The lock names the commit and the source path of each file, so a reviewer can compare them with
   `git show <commit>:<path> | shasum -a 256`.
-- [The template does not use the generated client] → The template reads two routes with `fetch`
-  and the vendored types. The client is for a site that wants the four routes with their types.
-- [The client has no test of its own] → Tasks 7.2 and 7.3 prove that the generated types match the
-  pinned description, not what the client sends. A later RED and GREEN pair covers the client.
+- [Tasks 7.2 and 7.3 prove the generated types, not what the client sends] → Tasks 7.11 and 7.12
+  test the client with a fake `fetch`, and the template reads the release and its pages through it.
 - [happy-dom is not a real browser] → It runs the module bundle, `fetch` and the DOM that the
   template uses. A visual check is not a goal of the test.

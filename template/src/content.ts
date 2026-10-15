@@ -1,26 +1,30 @@
-import type { Page, Release } from '@ratatoskr/site-sdk';
+import {
+  createContentClient,
+  type DeliveryAnswer,
+  type Page,
+  type Release,
+} from '@ratatoskr/site-sdk';
 
-// The sites gateway forwards `/_r/*` to Edge, so the delivery API is on the origin of the site.
-const contentBase = `/_r/v1/sites/${encodeURIComponent(__RATATOSKR_SITE_ID__)}/content/`;
+// The sites gateway forwards `/_r/*` to Edge, so the delivery API is on the origin of the site. The
+// client sends no credential, not even a cookie of this origin.
+const baseUrl = '/_r';
+const client = createContentClient({ baseUrl, site: __RATATOSKR_SITE_ID__ });
 
-async function readJson<T>(route: string): Promise<T> {
-  // The public routes take no credential, so none is sent, not even a cookie of this origin.
-  const response = await fetch(contentBase + route, { credentials: 'omit' });
-  if (!response.ok) {
-    throw new Error(`The delivery API answered ${response.status} for ${route}.`);
-  }
-  return (await response.json()) as T;
+// The template sends no `If-None-Match`, so a 304 is not expected. The browser cache revalidates.
+function bodyOf<T>(answer: DeliveryAnswer<T>): T {
+  if (answer.status !== 200) throw new Error('The delivery API answered 304 with no body.');
+  return answer.body;
 }
 
-export function readRelease(): Promise<Release> {
-  return readJson<Release>('release');
+export async function readRelease(): Promise<Release> {
+  return bodyOf(await client.release());
 }
 
-export function readPage(slug: string): Promise<Page> {
-  return readJson<Page>(`pages/${slug.split('/').map(encodeURIComponent).join('/')}`);
+export async function readPage(slug: string): Promise<Page> {
+  return bodyOf(await client.page(slug));
 }
 
 // The address of the bytes of one asset of the current release.
 export function assetUrl(sha256: string): string {
-  return `${contentBase}assets/${encodeURIComponent(sha256)}`;
+  return `${baseUrl}/v1/sites/${encodeURIComponent(__RATATOSKR_SITE_ID__)}/content/assets/${encodeURIComponent(sha256)}`;
 }

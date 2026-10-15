@@ -19,5 +19,10 @@ if (typeof siteId !== 'string' || !/^[a-z0-9-]{3,40}$/.test(siteId)) {
 
 export default defineConfig({
   root: fileURLToPath(new URL('.', import.meta.url)),
+  // Inside this repository the template takes the package from `src/`, as `tsconfig.json` does. A
+  // site outside it installs `@ratatoskr/site-sdk` and needs no alias.
+  resolve: {
+    alias: { '@ratatoskr/site-sdk': fileURLToPath(new URL('../src/index.ts', import.meta.url)) },
+  },
   define: { __RATATOSKR_SITE_ID__: JSON.stringify(siteId) },
 });

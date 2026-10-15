@@ -14,9 +14,11 @@ publications at run time through the anonymous Content Delivery API (workspace c
 
 - The package exports the contract types of a release, a page and a site manifest, and
   `createContentClient`, a typed client for the four delivery routes: the release, a page, an
-  asset and the search. Its types are generated from the Content Delivery API description of
-  `ratatoskr-sites`. It sends `GET` with no credential, and it gives back the `ETag` of each answer
-  for a later `ifNoneMatch`. The template does not use the client yet.
+  asset and the search, each with `GET` and `HEAD`. Its types are generated from the Content
+  Delivery API description of `ratatoskr-sites`. It sends no credential, it gives back the `ETag`
+  of each answer for a later `ifNoneMatch`, and it refuses a search `q` outside 1 to 256 Unicode
+  scalar values, a `limit` outside 1 to 50 and a negative `offset` before the request. The template
+  reads the release and its pages through it.
 - The package is not on npm yet, and `package.json` is `private`. Until it is published, the
   template builds only inside this repository, where it takes the types from `src/`.
 - Hosting a site on the Ratatoskr host comes with SITE-026 (`add-site-gateway-hosting`).

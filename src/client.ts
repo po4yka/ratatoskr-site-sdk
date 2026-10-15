@@ -21,6 +21,12 @@ export type SearchQuery = operations['searchRelease']['parameters']['query'];
 export type DeliveryAnswer<T> =
   { status: 200; etag: string | null; body: T } | { status: 304; etag: string | null };
 
+// The answer to HEAD: the status and the `ETag` of the GET answer, with no body.
+export interface HeadAnswer {
+  status: 200 | 304;
+  etag: string | null;
+}
+
 export interface ReadOptions {
   // An `ETag` of an earlier answer.
   ifNoneMatch?: string;
@@ -42,10 +48,15 @@ export interface ContentClient {
   // `sha256` is the lower-case hex digest of the asset, as the release names it.
   asset(sha256: string, options?: ReadOptions): Promise<DeliveryAnswer<Blob>>;
   search(query: SearchQuery, options?: ReadOptions): Promise<DeliveryAnswer<SearchResults>>;
+  releaseHead(options?: ReadOptions): Promise<HeadAnswer>;
+  pageHead(slug: string, options?: ReadOptions): Promise<HeadAnswer>;
+  assetHead(sha256: string, options?: ReadOptions): Promise<HeadAnswer>;
+  searchHead(query: SearchQuery, options?: ReadOptions): Promise<HeadAnswer>;
 }
 
 // An answer other than 200 and 304. A 404 has the code `sites.site_not_found`,
-// `sites.page_not_found` or `sites.asset_not_found`, and a 503 `sites.service_unavailable`.
+// `sites.page_not_found` or `sites.asset_not_found`, and a 503 `sites.service_unavailable`. An
+// answer to HEAD has no body, so its code is `null`.
 export class DeliveryError extends Error {
   readonly status: number;
   readonly code: string | null;
@@ -72,58 +83,88 @@ function checked(value: string, rule: { name: string; pattern: RegExp; max?: num
   return value;
 }
 
+function checkedNumber(rule: {
+  name: string;
+  value: number | undefined;
+  min: number;
+  max: number;
+}) {
+  const { name, value, min, max } = rule;
+  if (value !== undefined && (!Number.isInteger(value) || value < min || value > max)) {
+    throw new RangeError(`The search ${name} must be an integer from ${min} to ${max}.`);
+  }
+}
+
+// The API answers 400 to these values, so the client refuses them before the request.
 function searchRoute(query: SearchQuery): string {
+  const length = [...query.q].length;
+  if (length < 1 || length > 256) {
+    throw new RangeError('The search q must be 1 to 256 Unicode scalar values.');
+  }
+  checkedNumber({ name: 'limit', value: query.limit, min: 1, max: 50 });
+  checkedNumber({ name: 'offset', value: query.offset, min: 0, max: Number.MAX_SAFE_INTEGER });
   const params = new URLSearchParams({ q: query.q });
   if (query.limit !== undefined) params.set('limit', String(query.limit));
   if (query.offset !== undefined) params.set('offset', String(query.offset));
   return `search?${params.toString()}`;
 }
 
+const pageRoute = (slug: string): string =>
+  `pages/${checked(slug, { name: 'slug', pattern: slugPattern, max: 1024 })}`;
+const assetRoute = (sha256: string): string =>
+  `assets/${checked(sha256, { name: 'asset digest', pattern: sha256Pattern })}`;
+
 async function failure(response: Response): Promise<DeliveryError> {
   const envelope = (await response.json().catch(() => null)) as Partial<ErrorEnvelope> | null;
   return new DeliveryError(response.status, envelope);
+}
+
+async function headAnswer(response: Response): Promise<HeadAnswer> {
+  if (response.status !== 200 && response.status !== 304) throw await failure(response);
+  return { status: response.status === 304 ? 304 : 200, etag: response.headers.get('ETag') };
 }
 
 async function answer<T>(
   response: Response,
   body: (response: Response) => Promise<T>,
 ): Promise<DeliveryAnswer<T>> {
-  const etag = response.headers.get('ETag');
-  if (response.status === 304) return { status: 304, etag };
-  if (response.status !== 200) throw await failure(response);
-  return { status: 200, etag, body: await body(response) };
+  const { status, etag } = await headAnswer(response);
+  return status === 304 ? { status, etag } : { status, etag, body: await body(response) };
 }
 
 const json = <T>(response: Response): Promise<T> => response.json() as Promise<T>;
 const blob = (response: Response): Promise<Blob> => response.blob();
+
+interface Request extends ReadOptions {
+  method: 'GET' | 'HEAD';
+}
 
 export function createContentClient(options: ContentClientOptions): ContentClient {
   const site = checked(options.site, { name: 'site id', pattern: sitePattern });
   const base = `${options.baseUrl}/v1/sites/${site}/content/`;
   const fetchImpl = options.fetch ?? globalThis.fetch.bind(globalThis);
 
-  async function read(route: string, readOptions: ReadOptions = {}): Promise<Response> {
+  async function read(route: string, request: Request): Promise<Response> {
     const headers = new Headers();
-    if (readOptions.ifNoneMatch !== undefined)
-      headers.set('If-None-Match', readOptions.ifNoneMatch);
+    if (request.ifNoneMatch !== undefined) headers.set('If-None-Match', request.ifNoneMatch);
     // The public routes take no credential, so none is sent, not even a cookie of this origin.
-    const init: RequestInit = { method: 'GET', headers, credentials: 'omit' };
-    if (readOptions.signal !== undefined) init.signal = readOptions.signal;
+    const init: RequestInit = { method: request.method, headers, credentials: 'omit' };
+    if (request.signal !== undefined) init.signal = request.signal;
     return fetchImpl(base + route, init);
   }
+  const get = (route: string, readOptions: ReadOptions = {}) =>
+    read(route, { ...readOptions, method: 'GET' });
+  const head = async (route: string, readOptions: ReadOptions = {}) =>
+    headAnswer(await read(route, { ...readOptions, method: 'HEAD' }));
 
   return {
-    release: async (readOptions) =>
-      answer(await read('release', readOptions), json<DeliveryRelease>),
-    page: async (slug, readOptions) => {
-      const route = `pages/${checked(slug, { name: 'slug', pattern: slugPattern, max: 1024 })}`;
-      return answer(await read(route, readOptions), json<DeliveryPage>);
-    },
-    asset: async (sha256, readOptions) => {
-      const route = `assets/${checked(sha256, { name: 'asset digest', pattern: sha256Pattern })}`;
-      return answer(await read(route, readOptions), blob);
-    },
-    search: async (query, readOptions) =>
-      answer(await read(searchRoute(query), readOptions), json<SearchResults>),
+    release: async (o) => answer(await get('release', o), json<DeliveryRelease>),
+    page: async (slug, o) => answer(await get(pageRoute(slug), o), json<DeliveryPage>),
+    asset: async (sha256, o) => answer(await get(assetRoute(sha256), o), blob),
+    search: async (query, o) => answer(await get(searchRoute(query), o), json<SearchResults>),
+    releaseHead: async (o) => head('release', o),
+    pageHead: async (slug, o) => head(pageRoute(slug), o),
+    assetHead: async (sha256, o) => head(assetRoute(sha256), o),
+    searchHead: async (query, o) => head(searchRoute(query), o),
   };
 }
