@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 // a vendored folder that the lock does not name.
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const lockPath = join(root, 'contracts', 'contracts.lock.json');
-const vendoredDirs = ['src/contracts', 'contracts/fixtures'];
+const vendoredDirs = ['src/contracts', 'contracts/fixtures', 'contracts/schemas'];
 
 function listFiles(dir) {
   return readdirSync(join(root, dir), { withFileTypes: true, recursive: true })

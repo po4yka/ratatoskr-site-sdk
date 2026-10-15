@@ -1,0 +1,8 @@
+{
+  "digest": "b706d59af04d82391c9374aa756879ac0daf0d43d6bc8ca11633a3c47e241fa4",
+  "sitesCommit": "a4587f72cdc52db127520afe802660af8963366f",
+  "generator": {
+    "name": "openapi-typescript",
+    "version": "7.13.0"
+  }
+}

@@ -38,6 +38,21 @@
       "sha256": "e53980c5ecf875399d42ba6a2f7873b898a114643fea8e8440957d932ab7e566"
     },
     {
+      "path": "contracts/schemas/json-schema/core/error-envelope.v1.schema.json",
+      "source": "schemas/json-schema/core/error-envelope.v1.schema.json",
+      "sha256": "199f6ec7600de13cc5ab35bd0ae5bf1e996488cd33442e44dc03615acb55e973"
+    },
+    {
+      "path": "contracts/schemas/json-schema/sites/page.v1.schema.json",
+      "source": "schemas/json-schema/sites/page.v1.schema.json",
+      "sha256": "6eeece920276efa39d06c3b1bd6acfa687228a56a04b9ea85fb4268437520ee4"
+    },
+    {
+      "path": "contracts/schemas/json-schema/sites/release.v1.schema.json",
+      "source": "schemas/json-schema/sites/release.v1.schema.json",
+      "sha256": "00a5f0f5331d2486a9dc7425562bf2401b84e31cd2bc652c2007d3cda5ae2233"
+    },
+    {
       "path": "src/contracts/sites/page.v1.ts",
       "source": "generated/typescript/json-schema/sites/page.v1.ts",
       "sha256": "eaf1b78980d3f9c78b5c7f47a78113adb238e64905fc17c087c3deb58ad5a114"

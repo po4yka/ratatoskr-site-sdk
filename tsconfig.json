@@ -17,5 +17,11 @@
     "skipLibCheck": true,
     "paths": { "@ratatoskr/site-sdk": ["./src/index.ts"] }
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "template/**/*.ts", "vitest.config.ts"]
+  "include": [
+    "src/**/*.ts",
+    "tests/**/*.ts",
+    "scripts/**/*.ts",
+    "template/**/*.ts",
+    "vitest.config.ts"
+  ]
 }
