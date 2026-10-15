@@ -19,6 +19,8 @@
   ],
   "scripts": {
     "contracts:check": "node scripts/check-contracts.mjs",
+    "client:generate": "node scripts/generate-client.ts",
+    "generated:check": "vitest run scripts/check-generated.test.ts",
     "lint": "eslint .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",

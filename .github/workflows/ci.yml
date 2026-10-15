@@ -45,6 +45,12 @@ jobs:
       - run: npm ci
 
       - run: npm run contracts:check
+      # generated-drift: src/generated/ is what openapi-typescript writes from the pinned Content
+      # Delivery API description and the pinned contracts. The generation stops when the description
+      # and openapi/content-delivery.lock.json disagree. The step runs before the later steps, so
+      # they never compile against a client that has drifted.
+      - run: npm run generated:check
+        name: generated-drift
       - run: npm run lint
       - run: npm run format:check
       - run: npm run typecheck

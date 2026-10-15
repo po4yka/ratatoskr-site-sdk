@@ -19,9 +19,9 @@ D10, spec `site-content-delivery`) assigns that to this new repository.
   `ast` with DOM nodes and text.
 - Write the README: how to start a site from the template, how to write the manifest, and which
   capabilities are public.
-- Later, in this change: the client generated with `openapi-typescript` from the Content Delivery
-  API description and its `generated-drift` check (workspace tasks 7.2 and 7.3). That description
-  will be `openapi/content-delivery.json` in `ratatoskr-sites`, and it does not exist yet.
+- The client generated with `openapi-typescript` from the Content Delivery API description and its
+  `generated-drift` check (workspace tasks 7.2 and 7.3). That description is
+  `openapi/content-delivery.json` in `ratatoskr-sites` (ADR-0012 of `ratatoskr-workspace`).
 
 ## Capabilities
 

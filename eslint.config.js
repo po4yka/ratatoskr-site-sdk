@@ -17,8 +17,9 @@ const sizeLimits = {
 
 export default tseslint.config(
   // `src/contracts/` is vendored byte-exact from ratatoskr-contracts: `npm run contracts:check`
-  // owns it, and an edit there is a drift from the pinned contracts. `dist/` is build output.
-  globalIgnores(['node_modules/', '**/dist/', 'coverage/', 'src/contracts/']),
+  // owns it, and an edit there is a drift from the pinned contracts. `src/generated/` is the output
+  // of `scripts/generate-client.ts`, and `npm run generated:check` owns it. `dist/` is build output.
+  globalIgnores(['node_modules/', '**/dist/', 'coverage/', 'src/contracts/', 'src/generated/']),
   js.configs.recommended,
   ...tseslint.configs.strict,
   sizeLimits,

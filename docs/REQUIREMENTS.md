@@ -8,7 +8,7 @@ that this repository owns.
    `sites/site-manifest.v1` from the pinned contracts.
 2. `@ratatoskr/site-sdk` exposes a typed client for every route of the Content Delivery API,
    generated from the published API description. A check fails when the committed generated code
-   differs from a fresh generation. This waits for the API description in `ratatoskr-sites`.
+   differs from a fresh generation.
 3. The starter template builds with no code change and renders a release that the delivery API
    serves.
 4. The template carries an example `ratatoskr-site.toml` that validates against
