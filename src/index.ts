@@ -52,3 +52,16 @@ export type {
   SiteSessionOpened,
 } from './owner/sign-in.js';
 export { SiteApiError } from './owner/request.js';
+export type {
+  DraftNotice,
+  EditCompletedNotice,
+  EditConflictedNotice,
+  NotesConflictId,
+  OperationId,
+  ReleaseNotice,
+  SiteEvent,
+  SourceRef,
+  WireTimestamp,
+} from './contracts/sites/site-event.v1.js';
+export { openSiteEvents } from './live/events.js';
+export type { SiteEvents, SiteEventsOptions, SiteNotice } from './live/events.js';
