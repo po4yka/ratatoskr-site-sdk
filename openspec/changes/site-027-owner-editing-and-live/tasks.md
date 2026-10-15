@@ -11,4 +11,4 @@
 ## 2. Fixes from the review of group 10
 
 - [x] 2.1 RED (review M1): add `src/owner/return-path.test.ts`. `isSitePath` refuses a path with a tab, a line feed, a carriage return, `//`, `/\` and no `/` at the start, and accepts `/`, `/#/handbook/start`, `/docs/?tab=1` and the encoded `/%2F%2Fevil.example`, which stays on the site. `completeSignIn` replaces a return path with a JSON-encoded tab (`\u0009`) with `/`. Confirm that the tab, line feed, carriage return and JSON cases fail by assertion, because a browser removes those characters and the check does not. Result: 4 of 11 cases fail: `expected true to be false` (three times) and `expected '/\t/evil.example' to be '/'`.
-- [ ] 2.2 GREEN (review M1): refuse a control character, DEL and `\`, resolve the path against a fixed origin with `new URL`, and require that origin. Verify 2.1.
+- [x] 2.2 GREEN (review M1): refuse a control character, DEL and `\`, resolve the path against a fixed origin with `new URL`, and require that origin. Verify 2.1. Result: 2.1 passes (11 cases), and the other tests of `src/owner/` pass.

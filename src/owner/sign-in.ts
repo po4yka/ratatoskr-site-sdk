@@ -35,9 +35,15 @@ export interface SignInCallback {
 
 export type SignInWindow = Pick<Window, 'location' | 'history' | 'sessionStorage' | 'crypto'>;
 
-// A path on this site. `//` and `\` would let a browser read the rest as another host.
+const probeOrigin = 'https://site.invalid';
+
+// A path on this site. A browser removes a tab, a line feed and a carriage return from a URL and
+// reads `\` as `/`, so those characters, and every other control character, are refused. The path
+// is then resolved against a fixed origin, and it must keep that origin: `//host` would not.
 export function isSitePath(path: string): boolean {
-  return path.startsWith('/') && !path.startsWith('//') && !path.includes('\\');
+  // eslint-disable-next-line no-control-regex
+  if (!path.startsWith('/') || /[\u0000-\u001f\u007f\\]/u.test(path)) return false;
+  return new URL(path, probeOrigin).origin === probeOrigin;
 }
 
 function base64url(bytes: Uint8Array): string {
