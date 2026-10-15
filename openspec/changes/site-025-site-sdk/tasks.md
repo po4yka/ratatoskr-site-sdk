@@ -7,4 +7,4 @@
 - [x] 1.5 (7.5) GREEN: add the Vite and TypeScript starter template with an example `ratatoskr-site.toml`, the release read and the home page. Verify 1.4.
 - [x] 1.6 (7.7) RED: `template/tests/fixture-release.test.ts` "a page renders from its ast" opens the page views of `handbook/start` and `handbook/links` and asserts the heading, the callout title, the wiki link to the page view of `handbook/start`, and no element with `data-wikilink`. Confirm that it fails because the template shows the home page for every route.
 - [x] 1.7 (7.8) GREEN: add the page view, which renders the `ast` with DOM nodes and text. Verify 1.6.
-- [ ] 1.8 (7.6) Write `README.md`: how to start a site from the template, how to write the manifest, and which capabilities are public. No test: documentation.
+- [x] 1.8 (7.6) Write `README.md`: how to start a site from the template, how to write the manifest, and which capabilities are public. No test: documentation.
