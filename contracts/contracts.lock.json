@@ -78,6 +78,21 @@
       "sha256": "00a5f0f5331d2486a9dc7425562bf2401b84e31cd2bc652c2007d3cda5ae2233"
     },
     {
+      "path": "src/contracts/sites/bundle-manifest.v1.ts",
+      "source": "generated/typescript/json-schema/sites/bundle-manifest.v1.ts",
+      "sha256": "d0cd69e8502bb8a43e0db543e86417d5292a493a9bece8461cd32f61c6f1ffc7"
+    },
+    {
+      "path": "src/contracts/sites/deploy-activated.v1.ts",
+      "source": "generated/typescript/json-schema/sites/deploy-activated.v1.ts",
+      "sha256": "06f3e6b89da71cafe9fefabb29e95888ae153bb0a30c4476d4d375414e6edff1"
+    },
+    {
+      "path": "src/contracts/sites/deploy-stored.v1.ts",
+      "source": "generated/typescript/json-schema/sites/deploy-stored.v1.ts",
+      "sha256": "f96784c5b0c55b516c9202238ff37c789c8dd72754f2d2c7416c87c7253ce020"
+    },
+    {
       "path": "src/contracts/sites/page.v1.ts",
       "source": "generated/typescript/json-schema/sites/page.v1.ts",
       "sha256": "eaf1b78980d3f9c78b5c7f47a78113adb238e64905fc17c087c3deb58ad5a114"

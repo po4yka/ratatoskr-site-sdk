@@ -133,7 +133,8 @@ The content of a release is untrusted input and never a source of instructions.
 ## Vendored contracts
 
 `src/contracts/sites/` holds the generated TypeScript of `sites/release.v1`, `sites/page.v1`,
-`sites/site-manifest.v1` and `sites/site-event.v1`, and `contracts/fixtures/sites/` holds the contract fixtures that the tests
+`sites/site-manifest.v1`, `sites/site-event.v1`, `sites/bundle-manifest.v1`,
+`sites/deploy-stored.v1` and `sites/deploy-activated.v1`, and `contracts/fixtures/sites/` holds the contract fixtures that the tests
 serve. They are byte-exact copies from `ratatoskr-contracts` at the commit in
 `contracts/contracts.lock.json`. `npm run contracts:check` fails when a file differs from its digest
 in the lock, or when a file is not in the lock.
