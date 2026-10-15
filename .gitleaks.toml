@@ -1,0 +1,11 @@
+# gitleaks reads this file from the repository root. The default rules apply. The allowlists name
+# only values that are fake on purpose, so that a scan of this public repository reports a real
+# secret and nothing else. Add a new fake value of a test here, by its exact text.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "The pre-commit hook of the fleet looks for a private key header. The pattern is not a key."
+targetRules = ["private-key"]
+paths = ['''^\.githooks/pre-commit$''']

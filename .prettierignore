@@ -1,0 +1,20 @@
+# Prettier formats the code and its configuration. The documents are wrapped by hand at 100
+# columns, and the workflows and the openspec files are shared with the fleet, so they are not
+# formatted here.
+*.md
+*.yml
+*.yaml
+.agents/
+.claude/
+.opencode/
+openspec/
+
+# Output and the lockfile.
+dist/
+coverage/
+test-results/
+package-lock.json
+
+# Vendored byte-exact from ratatoskr-contracts; `npm run contracts:check` owns them.
+contracts/
+src/contracts/

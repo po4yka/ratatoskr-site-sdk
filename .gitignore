@@ -1,0 +1,33 @@
+# OS
+.DS_Store
+
+# Editors and IDEs
+.idea/
+.vscode/
+
+# Node dependencies
+node_modules/
+
+# TypeScript and lint caches
+*.tsbuildinfo
+.eslintcache
+
+# Build output: the package in `dist/`, the starter site in `template/dist/`.
+dist/
+
+# Test and coverage output
+coverage/
+test-results/
+
+# Local environment and secrets
+.env
+.env.*
+
+# Logs
+*.log
+npm-debug.log*
+
+# Agent worktrees
+.worktrees/
+.omo/
+.omc/
