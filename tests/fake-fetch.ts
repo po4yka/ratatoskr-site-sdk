@@ -5,6 +5,8 @@ export interface SentRequest {
   method: string;
   credentials: RequestCredentials | undefined;
   headers: Record<string, string>;
+  // The body as text, when the request sends a string or bytes.
+  body: string | undefined;
 }
 
 export interface FakeFetch {
@@ -14,6 +16,12 @@ export interface FakeFetch {
 
 export const etagOfRelease = '"0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b.0123456789abcdef"';
 
+function bodyText(body: BodyInit | null | undefined): string | undefined {
+  if (typeof body === 'string') return body;
+  if (body instanceof Uint8Array) return new TextDecoder().decode(body);
+  return undefined;
+}
+
 export function fakeFetch(handler: (request: SentRequest) => Response): FakeFetch {
   const sent: SentRequest[] = [];
   const fetchImpl = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
@@ -22,6 +30,7 @@ export function fakeFetch(handler: (request: SentRequest) => Response): FakeFetc
       method: init?.method ?? 'GET',
       credentials: init?.credentials,
       headers: Object.fromEntries(new Headers(init?.headers).entries()),
+      body: bodyText(init?.body),
     };
     sent.push(request);
     return Promise.resolve(handler(request));
