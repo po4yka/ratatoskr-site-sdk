@@ -38,6 +38,31 @@
       "sha256": "e53980c5ecf875399d42ba6a2f7873b898a114643fea8e8440957d932ab7e566"
     },
     {
+      "path": "contracts/fixtures/sites/site-event/valid/draft-changed.json",
+      "source": "fixtures/sites/site-event/valid/draft-changed.json",
+      "sha256": "ca53ba01d118f95c3a3c0968245e265f1c765fdbc8f6cfc741cb60f42d29bbf1"
+    },
+    {
+      "path": "contracts/fixtures/sites/site-event/valid/edit-completed.json",
+      "source": "fixtures/sites/site-event/valid/edit-completed.json",
+      "sha256": "710200b364bcf28ee0e34c760e5962d493fd8d27496c089ce0393d125876722b"
+    },
+    {
+      "path": "contracts/fixtures/sites/site-event/valid/edit-conflicted.json",
+      "source": "fixtures/sites/site-event/valid/edit-conflicted.json",
+      "sha256": "c133c929e7810763b85f37d9f93e74bdd3e6ea1cbd1391b1831774b825cdf7b6"
+    },
+    {
+      "path": "contracts/fixtures/sites/site-event/valid/release-published.json",
+      "source": "fixtures/sites/site-event/valid/release-published.json",
+      "sha256": "2ced34a1698d3a5f980d08b7240602bce16722735c5f26c8f395d88406493208"
+    },
+    {
+      "path": "contracts/fixtures/sites/site-event/valid/resync.json",
+      "source": "fixtures/sites/site-event/valid/resync.json",
+      "sha256": "5931b522724528aeda21dbef9e0c3a7242148efc8a6c4aa95803264cbefaafe1"
+    },
+    {
       "path": "contracts/schemas/json-schema/core/error-envelope.v1.schema.json",
       "source": "schemas/json-schema/core/error-envelope.v1.schema.json",
       "sha256": "199f6ec7600de13cc5ab35bd0ae5bf1e996488cd33442e44dc03615acb55e973"
@@ -61,6 +86,11 @@
       "path": "src/contracts/sites/release.v1.ts",
       "source": "generated/typescript/json-schema/sites/release.v1.ts",
       "sha256": "81fda6ae2961ea80555b49b6fbd6a28eaf173c26d330119965f6ce6f6f59bcc6"
+    },
+    {
+      "path": "src/contracts/sites/site-event.v1.ts",
+      "source": "generated/typescript/json-schema/sites/site-event.v1.ts",
+      "sha256": "ee8046824b92830e147e56b371d4aba5dda8a66c44fd6b7e62fddcf7f6248978"
     },
     {
       "path": "src/contracts/sites/site-manifest.v1.ts",

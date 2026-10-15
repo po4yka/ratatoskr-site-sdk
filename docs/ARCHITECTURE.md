@@ -18,10 +18,10 @@ visitor browser ──GET /_r/v1/sites/{site}/content/...──▶ sites gateway
 |---|---|
 | `src/` | The package `@ratatoskr/site-sdk`. |
 | `src/contracts/` | The generated TypeScript of the site contracts, vendored from `ratatoskr-contracts`. |
-| `src/generated/` | The types of the Content Delivery API, generated from `openapi/`. |
+| `src/generated/` | The types of the Content Delivery API and of the owner routes of Edge, generated from `openapi/`. |
 | `src/client.ts` | The typed client for the four delivery routes. |
 | `contracts/` | The lock of the vendored files, the contract schemas and the fixtures that the tests serve. |
-| `openapi/` | The Content Delivery API description from `ratatoskr-sites`, and its lock. |
+| `openapi/` | The API descriptions from `ratatoskr-sites` and `ratatoskr-platform`, and their locks. |
 | `template/` | The starter site: Vite and TypeScript, no UI framework. |
 
 ## Rules

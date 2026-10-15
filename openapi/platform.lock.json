@@ -1,0 +1,8 @@
+{
+  "digest": "12a0d7ed21146dc7f3a0a262c4bbd1bd5fdb610b36d8c8229b88e8d4e1dc042e",
+  "platformCommit": "e7a1488110fcbd0222c3f9a3854122e6c96607d9",
+  "generator": {
+    "name": "openapi-typescript",
+    "version": "7.13.0"
+  }
+}

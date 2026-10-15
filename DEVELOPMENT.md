@@ -58,7 +58,13 @@ its SHA-256, the `ratatoskr-sites` commit and the generator version. The descrip
 the contract schemas by raw URLs at one `ratatoskr-contracts` commit. `contracts/schemas/` holds
 those schemas, in the contracts lock, so the generation reads no network.
 
-`npm run client:generate` writes `src/generated/content-delivery.ts` with `openapi-typescript`.
+`openapi/platform.json` is the API description of Edge, byte-exact from `openapi/openapi.json` of
+`ratatoskr-platform`, and `openapi/platform.lock.json` records its SHA-256, the Platform commit and
+the generator version. The owner routes of a site (SITE-027) take their types from it. It holds no
+remote reference.
+
+`npm run client:generate` writes `src/generated/content-delivery.ts` and
+`src/generated/platform.ts` with `openapi-typescript`.
 It stops when the description and its lock disagree, when the installed generator is not the
 locked version, and when the description references a contracts commit other than the one in
 `contracts/contracts.lock.json`. `npm run generated:check` generates into a temporary folder and
@@ -71,6 +77,10 @@ of the generated types. To move the pin:
    lock.
 3. If the description references a new contracts commit, move the contracts pin first.
 4. Run `npm run client:generate`, then the whole gate.
+
+The pin of `openapi/platform.json` moves in the same way, from `ratatoskr-platform`
+(`git -C <platform> show <commit>:openapi/openapi.json > openapi/platform.json`), with the commit in
+`platformCommit`.
 
 `openapi-typescript` 7.13.0 declares the peer `typescript ^5.x`. The `overrides` entry in
 `package.json` gives it the TypeScript of this tree, so a plain `npm ci` resolves.
