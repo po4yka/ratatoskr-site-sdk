@@ -160,3 +160,46 @@ describe('the publish step', () => {
     expect(cli.err.join('\n')).toContain('_r/x');
   });
 });
+
+// Re-review of M2: only the forms that oras prints for an absent tag count as absent. "not found"
+// in another message says nothing about the tag.
+async function publishAfter(stderr: string) {
+  const dir = await buildOutput();
+  dirs = [dir];
+  const cli = fakeCli({
+    env: { GITHUB_SHA: commit },
+    exec: (call) => (call.args[0] === 'manifest' ? failed(stderr) : ok(`${existing}\n`)),
+  });
+  const manifest = ['--site', 'docs', '--repository', 'owner/docs-site', '--commit', commit];
+  expect(await run(['bundle', 'manifest', '--dir', dir, ...manifest], cli.deps)).toBe(0);
+  const code = await run(
+    ['bundle', 'publish', '--dir', dir, '--image', image, '--commit', commit],
+    cli.deps,
+  );
+  return { code, verbs: cli.calls.map((call) => call.args[0]) };
+}
+
+describe('the not-found answer of oras', () => {
+  it.each([
+    'Error: credential helper not found',
+    'exec: "docker-credential-desktop": executable file not found in $PATH',
+    'Error: 404 page not found',
+    `Error: ${image}:sha-${'0'.repeat(40)}: not found`,
+  ])('stops when oras fails with %s', async (stderr) => {
+    const { code, verbs } = await publishAfter(stderr);
+
+    expect(verbs).toEqual(['manifest']);
+    expect(code).not.toBe(0);
+  });
+
+  it.each([
+    `Error: ${image}:sha-${commit}: not found`,
+    'Error: GET https://ghcr.io/v2/owner/docs-site/manifests/x: MANIFEST_UNKNOWN: manifest unknown',
+    'Error: GET https://ghcr.io/v2/owner/docs-site/tags/list: NAME_UNKNOWN: repository name not known',
+  ])('pushes when oras prints %s', async (stderr) => {
+    const { code, verbs } = await publishAfter(stderr);
+
+    expect(verbs).toEqual(['manifest', 'push']);
+    expect(code).toBe(0);
+  });
+});
