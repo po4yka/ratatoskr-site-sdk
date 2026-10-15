@@ -1,0 +1,21 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+body {
+  margin: 0 auto;
+  max-width: 44rem;
+  padding: 2rem 1rem;
+}
+
+.callout {
+  border-left: 0.25rem solid currentColor;
+  margin: 1rem 0;
+  padding: 0.25rem 1rem;
+}
+
+.callout-title {
+  font-weight: 600;
+}

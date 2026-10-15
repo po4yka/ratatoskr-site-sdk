@@ -1,0 +1,11 @@
+# The manifest of this site (contract `sites/site-manifest.v1`). Submit it to Ratatoskr, and approve
+# it in the web client before the site serves anything. Every other key is refused.
+#
+# The values name the site of the contract fixture release, so the template test runs this template
+# with no change. Write your own site id, hostname and publication ids here.
+site_id = "docs"
+hostname = "docs.example.test"
+publications = ["handbook"]
+# The public capabilities that this template uses. `search.publication` and `live.release` are also
+# public; the other four need an owner session and grant nothing to a visitor.
+capabilities = ["pages.read", "assets.read"]

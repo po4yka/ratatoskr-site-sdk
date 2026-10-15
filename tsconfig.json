@@ -14,7 +14,8 @@
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "noEmit": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": { "@ratatoskr/site-sdk": ["./src/index.ts"] }
   },
   "include": ["src/**/*.ts", "tests/**/*.ts", "template/**/*.ts", "vitest.config.ts"]
 }

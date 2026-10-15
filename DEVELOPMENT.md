@@ -31,7 +31,7 @@ This list and `.github/workflows/ci.yml` are one list. A step in `ci.yml` and
 `tests/gate-parity.test.ts` fail when they differ, so change both or neither. The gate also runs
 `npm audit --omit=dev --audit-level=high`.
 
-`npm run build` writes the package to `dist/`.
+`npm run build` writes the package to `dist/` and the starter site to `template/dist/`.
 
 ## The contract types
 
