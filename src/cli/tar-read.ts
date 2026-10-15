@@ -1,4 +1,4 @@
-import { CliError } from './bundle-paths.js';
+import { bundlePathProblem, CliError } from './bundle-paths.js';
 import type { TarEntry } from './tar.js';
 
 // Reads a bundle archive in memory. It accepts only what `writeTar` writes: regular files and PAX
@@ -6,12 +6,21 @@ import type { TarEntry } from './tar.js';
 // the disk.
 
 const blockSize = 512;
-const decoder = new TextDecoder();
+// Fatal: a name that is not UTF-8 stops the read instead of becoming U+FFFD.
+const decoder = new TextDecoder('utf-8', { fatal: true });
+
+function decode(bytes: Uint8Array): string {
+  try {
+    return decoder.decode(bytes);
+  } catch {
+    throw new CliError('The bundle archive holds a name that is not UTF-8.');
+  }
+}
 
 function text(block: Uint8Array, field: { at: number; length: number }): string {
   const bytes = block.subarray(field.at, field.at + field.length);
   const end = bytes.indexOf(0);
-  return decoder.decode(end < 0 ? bytes : bytes.subarray(0, end));
+  return decode(end < 0 ? bytes : bytes.subarray(0, end));
 }
 
 function checkSum(block: Uint8Array): void {
@@ -27,11 +36,11 @@ function paxPath(body: Uint8Array): string | undefined {
   let path: string | undefined;
   while (at < body.length) {
     const space = body.indexOf(0x20, at);
-    const length = parseInt(decoder.decode(body.subarray(at, space)), 10);
+    const length = parseInt(decode(body.subarray(at, space)), 10);
     if (space < 0 || !Number.isInteger(length) || length <= 0) {
       throw new CliError('The bundle archive has a damaged PAX record.');
     }
-    const record = decoder.decode(body.subarray(space + 1, at + length - 1));
+    const record = decode(body.subarray(space + 1, at + length - 1));
     if (record.startsWith('path=')) path = record.slice('path='.length);
     at += length;
   }
@@ -55,6 +64,14 @@ function header(block: Uint8Array): Header {
   };
 }
 
+// A path of the archive that leaves the bundle, or that the gateway reserves, stops the read.
+function safeEntry(entry: TarEntry): TarEntry {
+  const problem = bundlePathProblem(entry.path);
+  if (problem !== null)
+    throw new CliError(`The bundle archive holds ${entry.path}, which ${problem}.`);
+  return entry;
+}
+
 export function readTar(archive: Uint8Array): TarEntry[] {
   const entries: TarEntry[] = [];
   let offset = 0;
@@ -69,7 +86,7 @@ export function readTar(archive: Uint8Array): TarEntry[] {
     if (type === 'x') {
       longPath = paxPath(body);
     } else if (type === '0' || type === '\0') {
-      entries.push({ path: longPath ?? path, bytes: body });
+      entries.push(safeEntry({ path: longPath ?? path, bytes: body }));
       longPath = undefined;
     } else {
       throw new CliError(`The bundle archive holds ${path}, which is not a regular file.`);

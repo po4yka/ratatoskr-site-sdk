@@ -195,7 +195,8 @@ year.
    never pushed again. `hashed-globs` (default `assets/**`) names the content-hashed files.
 2. **Pair the deploy command once.** In the web client, make a pairing code with the expected kind
    `site_deployer` for the site. On the machine that deploys, run
-   `npx ratatoskr-site login --pairing-code <code> --site docs --api https://<edge>`. The command
+   `npx ratatoskr-site login --pairing-code - --site docs --api https://<edge>` and type the code;
+   `-` reads it from stdin, so it is not in the shell history. The command
    keeps the device secret in the credential store of the system (the macOS keychain, or the Secret
    Service through `secret-tool` on Linux), never in the site repository. You can revoke the device
    in the device list of the web client.
@@ -206,3 +207,8 @@ year.
    `--no-activate` it uploads only; deploy the same commit again to activate it later. To roll
    back, deploy the previous commit: the host keeps it, so nothing is downloaded again.
    `--repository owner/name` names the repository when the remote `origin` is not on GitHub.
+
+If the attestation check fails for a commit, the tag is not trusted and the command sends nothing.
+A tag never moves, so running the workflow again does not replace it. Delete that package version
+of `ghcr.io/<owner>/<repository>` in the package settings of GitHub, then run the workflow again
+for the commit. It pushes and attests a new bundle, and you can deploy it.

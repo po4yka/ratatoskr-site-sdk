@@ -38,13 +38,18 @@ async function tool(deps: CliDeps, call: { command: string; args: string[]; fail
   return result.stdout.trim();
 }
 
+// `https://github.com/owner/name(.git)`, `git@github.com:owner/name(.git)` or
+// `ssh://git@github.com/owner/name(.git)`, and nothing else.
+const githubRemote =
+  /^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)([A-Za-z0-9-]+\/[A-Za-z0-9._-]+?)(?:\.git)?\/?$/;
+
 async function originRepository(deps: CliDeps): Promise<string> {
   const remote = await deps.exec({
     command: 'git',
     args: ['remote', 'get-url', 'origin'],
     cwd: deps.cwd,
   });
-  const match = /github\.com[:/]([^/]+\/[^/]+?)(?:\.git)?$/.exec(remote.stdout.trim());
+  const match = githubRemote.exec(remote.stdout.trim());
   if (remote.code !== 0 || match?.[1] === undefined) {
     throw new CliError('The remote origin is not a GitHub repository. Name it with --repository.');
   }
@@ -77,6 +82,7 @@ async function verifiedArchive(
       expected.commit,
       '--signer-workflow',
       signerWorkflow,
+      '--deny-self-hosted-runners',
     ],
     failure: `The attestation of ${image}@${digest} is not valid`,
   });

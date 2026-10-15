@@ -16,6 +16,9 @@ function exec(call: ExecCall): Promise<ExecResult> {
     child.stderr.on('data', (chunk: Buffer) => (stderr += chunk.toString('utf8')));
     child.on('error', (error) => reject(new CliError(`${call.command}: ${error.message}`)));
     child.on('close', (code) => resolve({ code: code ?? 1, stdout, stderr }));
+    // A process that ends before it reads its input closes the pipe (EPIPE). Its exit status
+    // reports the result, so that error is not a second failure.
+    child.stdin.on('error', () => undefined);
     child.stdin.end(call.input ?? '');
   });
 }
@@ -27,6 +30,11 @@ export function nodeDeps(): CliDeps {
     credentials: systemCredentials(exec, process.platform),
     env: process.env,
     cwd: process.cwd(),
+    stdin: async () => {
+      let text = '';
+      for await (const chunk of process.stdin) text += String(chunk);
+      return text;
+    },
     out: (line) => process.stdout.write(`${line}\n`),
     err: (line) => process.stderr.write(`${line}\n`),
   };

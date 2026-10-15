@@ -28,6 +28,8 @@ export interface CliDeps {
   env: Record<string, string | undefined>;
   // The working directory: the site repository when the owner runs the command.
   cwd: string;
+  // The whole standard input of the command.
+  stdin(): Promise<string>;
   out(line: string): void;
   err(line: string): void;
 }

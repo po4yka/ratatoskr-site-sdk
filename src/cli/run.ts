@@ -13,7 +13,7 @@ export const usage = `Usage:
   ratatoskr-site bundle manifest --dir <dir> --site <site> --repository <owner/name>
       --commit <sha> [--hashed-globs <glob,...>] [--entry-document <path>] [--no-entry-fallback]
   ratatoskr-site bundle publish --dir <dir> --image <ghcr.io/owner/name> --commit <sha>
-  ratatoskr-site login --pairing-code <code> --site <site> --api <https://edge>
+  ratatoskr-site login --pairing-code <code|-> --site <site> --api <https://edge>
   ratatoskr-site deploy --site <site> --commit <sha> [--repository <owner/name>] [--no-activate]`;
 
 type Values = Record<string, string | boolean | undefined>;

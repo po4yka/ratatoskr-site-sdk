@@ -48,7 +48,21 @@ export async function storedDevice(site: string, deps: CliDeps): Promise<StoredD
   if (secret === null) {
     throw new CliError(`No device is paired for ${site}. Run ratatoskr-site login first.`);
   }
-  return JSON.parse(secret) as StoredDevice;
+  const damaged = new CliError(
+    `The credential store holds no valid device for ${site}. Run ratatoskr-site login again.`,
+  );
+  let device: Partial<StoredDevice> | null;
+  try {
+    device = JSON.parse(secret) as Partial<StoredDevice> | null;
+  } catch {
+    throw damaged;
+  }
+  const { api, device_id: id, device_secret: deviceSecret } = device ?? {};
+  if (typeof api !== 'string' || typeof id !== 'string' || typeof deviceSecret !== 'string') {
+    throw damaged;
+  }
+  // The address is checked again: the store is outside this program.
+  return { api: edgeOrigin(api), device_id: id, device_secret: deviceSecret };
 }
 
 export async function openDeviceSession(device: StoredDevice, deps: CliDeps): Promise<string> {

@@ -7,6 +7,7 @@ import {
   bundleFileName,
   bundleLayerMediaType,
   bundleMediaType,
+  bundlePathProblem,
   checked,
   CliError,
   commitPattern,
@@ -55,6 +56,9 @@ async function bundleEntries(
   }
   const entries: TarEntry[] = [{ path: manifestName, bytes: manifestBytes }];
   for (const file of manifest.files) {
+    // The manifest can be changed after the manifest step, so its paths are checked again.
+    const problem = bundlePathProblem(file.path);
+    if (problem !== null) throw new CliError(`${file.path} ${problem}.`);
     const bytes = await readFile(join(options.dir, file.path));
     if (bytes.length !== file.size_bytes || sha256Hex(bytes) !== file.sha256) {
       throw new CliError(`${file.path} changed after the manifest step.`);
@@ -107,7 +111,10 @@ export async function publishBundle(options: PublishOptions, deps: CliDeps): Pro
     throw new CliError(`oras cannot tell whether ${ref} exists: ${found.stderr.trim()}`);
   }
   if (found.code === 0) {
-    const digest = (JSON.parse(found.stdout) as { digest: string }).digest;
+    const digest = (JSON.parse(found.stdout) as { digest?: unknown }).digest;
+    if (typeof digest !== 'string' || !digestPattern.test(digest)) {
+      throw new CliError(`oras gave no sha256 digest for ${ref}: ${found.stdout.trim()}`);
+    }
     deps.out(`${ref} already exists at ${digest}; nothing is published.`);
     await output(deps, { image: options.image, digest, attest: 'false' });
     return 0;

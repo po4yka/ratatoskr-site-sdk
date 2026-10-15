@@ -1,4 +1,4 @@
-import { sha256Hex } from './bundle-paths.js';
+import { CliError, sha256Hex } from './bundle-paths.js';
 
 // The bundle archive: an uncompressed ustar archive (workspace design D4). Every entry is a regular
 // file with mode 0644, owner 0 and time 0, so one build output always gives the same bytes. A path
@@ -10,6 +10,8 @@ export interface TarEntry {
 }
 
 const blockSize = 512;
+// The ustar size field holds 11 octal digits: less than 8 GiB.
+const maxFileBytes = 8 * 1024 ** 3;
 const encoder = new TextEncoder();
 
 const octal = (value: number, width: number): string =>
@@ -49,6 +51,9 @@ function paxRecord(key: string, value: string): Uint8Array {
 }
 
 function entryBlocks(entry: TarEntry): Uint8Array[] {
+  if (entry.bytes.length >= maxFileBytes) {
+    throw new CliError(`${entry.path} is 8 GiB or more, which a bundle cannot hold.`);
+  }
   const blocks: Uint8Array[] = [];
   let name = entry.path;
   if (Buffer.byteLength(name) > 100) {

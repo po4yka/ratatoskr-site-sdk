@@ -27,11 +27,13 @@ export interface SiteEventsOptions {
   // start a reconnect instead.
   onError?: (error: SiteApiError) => void;
   fetch?: typeof fetch;
-  // The pause before a reconnect. The default is a timer.
+  // The pause before a reconnect. The default is a timer. A pause is at least 1 second and, with
+  // no `Retry-After`, at most 60 seconds.
   wait?: (milliseconds: number) => Promise<void>;
   // The first pause before a reconnect. The stream can change it with a `retry` field.
   retryMs?: number;
-  // A number from 0 to 1 for the jitter of a pause. The default is `Math.random`.
+  // A number from 0 to 1 for the jitter of a pause: 1 keeps the whole pause, 0 keeps one half.
+  // The default is `Math.random`.
   random?: () => number;
 }
 
@@ -45,7 +47,15 @@ interface Run {
   signal: AbortSignal;
   lastEventId: string | undefined;
   retryMs: number;
+  // Failed connections since a stream last opened.
+  failures: number;
+  // The pause that the last answer asked for with `Retry-After`.
+  retryAfterMs: number | null;
 }
+
+// Every pause is between these two. Edge sends a keep-alive every 15 seconds.
+const floorMs = 1000;
+const capMs = 60_000;
 
 const eventTypes = new Set<string>([
   'release.published',
@@ -71,11 +81,16 @@ function eventOf(data: string): SiteEvent | null {
   }
 }
 
+// A callback that throws is a fault of the site. The client keeps the stream, so that one bad event
+// does not stop the live updates.
 function deliver(run: Run, frame: SseFrame): void {
-  run.lastEventId = frame.id ?? run.lastEventId;
   const event = eventOf(frame.data);
-  if (event?.type === 'resync') run.options.onResync();
-  else if (event !== null) run.options.onEvent(event, frame.id ?? '');
+  try {
+    if (event?.type === 'resync') run.options.onResync();
+    else if (event !== null) run.options.onEvent(event, frame.id ?? '');
+  } catch {
+    // The stream goes on.
+  }
 }
 
 async function read(run: Run, body: ReadableStream<Uint8Array>): Promise<void> {
@@ -86,8 +101,16 @@ async function read(run: Run, body: ReadableStream<Uint8Array>): Promise<void> {
     const { done, value } = await reader.read();
     if (done) return;
     for (const frame of parser.push(decoder.decode(value, { stream: true }))) deliver(run, frame);
-    run.retryMs = parser.retryMs ?? run.retryMs;
+    // Also an event that holds only an id moves the id.
+    run.lastEventId = parser.lastEventId ?? run.lastEventId;
+    run.retryMs = Math.max(floorMs, parser.retryMs ?? run.retryMs);
   }
+}
+
+// `Retry-After` in seconds; a date is not read, because the client has no clock.
+function retryAfterOf(response: Response): number | null {
+  const seconds = response.headers.get('Retry-After') ?? '';
+  return /^\d+$/.test(seconds) ? Number(seconds) * 1000 : null;
 }
 
 // One connection. `true` when the client must stop; `false` when it reconnects.
@@ -102,20 +125,36 @@ async function connect(run: Run): Promise<boolean> {
     signal: run.signal,
   });
   if (response.status === 200 && response.body !== null) {
+    run.failures = 0;
     await read(run, response.body);
     return false;
   }
-  if (retryable(response.status)) return false;
+  if (retryable(response.status)) {
+    run.retryAfterMs = retryAfterOf(response);
+    return false;
+  }
   run.options.onError?.(await siteApiError(response));
   return true;
+}
+
+// `Retry-After` when the answer had it; else the retry time, doubled for each failure since the
+// last stream, at most 60 seconds, and then cut by a random part of up to one half, so that many
+// pages do not reconnect at the same moment.
+function pause(run: Run): number {
+  if (run.retryAfterMs !== null) return Math.max(floorMs, run.retryAfterMs);
+  const backoff = Math.min(capMs, run.retryMs * 2 ** run.failures);
+  run.failures += 1;
+  const random = run.options.random ?? Math.random;
+  return Math.max(floorMs, Math.round(backoff * (0.5 + random() / 2)));
 }
 
 async function follow(run: Run): Promise<void> {
   const wait = run.options.wait ?? timer;
   while (!run.signal.aborted) {
+    run.retryAfterMs = null;
     const stop = await connect(run).catch(() => false);
     if (stop || run.signal.aborted) return;
-    await wait(run.retryMs);
+    await wait(pause(run));
   }
 }
 
@@ -127,7 +166,9 @@ export function openSiteEvents(options: SiteEventsOptions): SiteEvents {
     url: `${options.baseUrl}/v1/sites/${site}/events`,
     signal: controller.signal,
     lastEventId: undefined,
-    retryMs: options.retryMs ?? 3000,
+    retryMs: Math.max(floorMs, options.retryMs ?? 3000),
+    failures: 0,
+    retryAfterMs: null,
   });
   return { close: () => controller.abort() };
 }

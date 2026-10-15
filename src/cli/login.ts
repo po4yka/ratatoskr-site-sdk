@@ -15,8 +15,10 @@ export interface LoginOptions {
 export async function login(options: LoginOptions, deps: CliDeps): Promise<number> {
   const site = checkedSite(options.site);
   const api = edgeOrigin(options.api);
+  // `-` reads the code from stdin, so that it is not in the shell history or the process list.
+  const code = options.pairingCode === '-' ? (await deps.stdin()).trim() : options.pairingCode;
   const body: PairDevice = {
-    code: options.pairingCode,
+    code,
     kind: 'site_deployer',
     display_name: `ratatoskr-site deploy ${site}`,
   };

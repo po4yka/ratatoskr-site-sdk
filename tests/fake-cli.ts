@@ -48,6 +48,7 @@ export function fakeCli(options: FakeCliOptions = {}): FakeCli {
     },
     env: options.env ?? {},
     cwd: options.cwd ?? process.cwd(),
+    stdin: () => Promise.resolve(options.stdin ?? ''),
     out: (line) => out.push(line),
     err: (line) => err.push(line),
   };
