@@ -1,0 +1,154 @@
+# The bundle of one commit of a site, defined once for every site repository (workspace change
+# `add-site-gateway-hosting`, design D3 and D4, spec `site-bundles`).
+#
+# A site repository calls this on a push to its default branch, pinned to a commit of
+# `ratatoskr-site-sdk`. For the commit that it built, it publishes `ghcr.io/<owner>/<repository>:
+# sha-<commit>`: an OCI artifact of the type `application/vnd.ratatoskr.site-bundle.v1` that holds
+# one uncompressed tar archive, with `ratatoskr-bundle.json` at its root, and a GitHub
+# build-provenance attestation beside it. `ratatoskr-site deploy` verifies that attestation against
+# this workflow before it sends a byte to the host.
+#
+# The steps are subcommands of `@ratatoskr/site-sdk`, which the site installs with `npm ci`, so the
+# steps come from the version that the site locks. Move this pin and that version together.
+name: site-bundle
+
+on:
+  workflow_call:
+    inputs:
+      site-id:
+        description: The site id of `ratatoskr-site.toml`.
+        type: string
+        required: true
+      node-version:
+        description: The Node version of the build.
+        type: string
+        default: "24"
+      working-directory:
+        description: The folder of the site's `package.json`, relative to the repository root.
+        type: string
+        default: "."
+      build-command:
+        description: The command that writes the static site into `output-dir`.
+        type: string
+        default: npm run build
+      output-dir:
+        description: The build output, relative to `working-directory`.
+        type: string
+        default: dist
+      hashed-globs:
+        description: Comma-separated globs of the content-hashed files; they get `immutable` caching.
+        type: string
+        default: "assets/**"
+      entry-document:
+        description: The file that the gateway serves for `/`.
+        type: string
+        default: index.html
+      entry-fallback:
+        description: Answer an unknown path with the entry document, as a single-page application needs.
+        type: boolean
+        default: true
+      publish:
+        description: Push and attest. Off builds and writes the manifest only.
+        type: boolean
+        default: true
+    outputs:
+      digest:
+        description: The digest of `sha-<commit>`, pushed now or before.
+        value: ${{ jobs.bundle.outputs.digest }}
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    name: Site bundle
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    permissions:
+      contents: read
+      packages: write      # push to ghcr.io
+      id-token: write      # the OIDC token the attestation is signed with; no key is stored anywhere
+      attestations: write  # record the attestation against the repository
+
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+
+    env:
+      SITE_ID: ${{ inputs.site-id }}
+      BUILD_COMMAND: ${{ inputs.build-command }}
+      OUTPUT_DIR: ${{ inputs.output-dir }}
+      HASHED_GLOBS: ${{ inputs.hashed-globs }}
+      ENTRY_DOCUMENT: ${{ inputs.entry-document }}
+      ENTRY_FALLBACK: ${{ inputs.entry-fallback }}
+      PUBLISH: ${{ inputs.publish }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The job pushes with its own token below, never with the checkout credential.
+          persist-credentials: false
+
+      # No dependency cache: a cache that another workflow of the repository can write must not
+      # feed a build that this job publishes and attests.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: eval "$BUILD_COMMAND"
+
+      # The step fails when the commit that was built is not GITHUB_SHA, so a bundle never names a
+      # commit that this run did not build.
+      - name: Write ratatoskr-bundle.json
+        run: |
+          set -euo pipefail
+          fallback=()
+          if [ "$ENTRY_FALLBACK" != "true" ]; then fallback=(--no-entry-fallback); fi
+          npx --no-install ratatoskr-site bundle manifest \
+            --dir "$OUTPUT_DIR" \
+            --site "$SITE_ID" \
+            --repository "$GITHUB_REPOSITORY" \
+            --commit "$(git rev-parse HEAD)" \
+            --hashed-globs "$HASHED_GLOBS" \
+            --entry-document "$ENTRY_DOCUMENT" \
+            "${fallback[@]}"
+
+      - name: Install oras
+        if: env.PUBLISH == 'true'
+        uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
+
+      - name: Log in to ghcr.io
+        if: env.PUBLISH == 'true'
+        env:
+          REGISTRY_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.actor }}
+        # Through stdin, so the token is never an argument in the process list.
+        run: printf '%s' "$REGISTRY_TOKEN" | oras login ghcr.io -u "$ACTOR" --password-stdin
+
+      # The tar archive, then `oras push` to sha-<commit>, unless that tag exists: a published tag
+      # never moves. The step writes `image`, `digest` and `attest` to GITHUB_OUTPUT.
+      - name: Push, unless this commit already has a bundle
+        id: push
+        if: env.PUBLISH == 'true'
+        run: |
+          set -euo pipefail
+          npx --no-install ratatoskr-site bundle publish \
+            --dir "$OUTPUT_DIR" \
+            --image "ghcr.io/${GITHUB_REPOSITORY,,}" \
+            --commit "$GITHUB_SHA"
+
+      - name: Attest that this workflow built this digest
+        if: env.PUBLISH == 'true' && steps.push.outputs.attest == 'true'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ steps.push.outputs.image }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
