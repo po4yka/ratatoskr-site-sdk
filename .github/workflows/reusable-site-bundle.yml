@@ -64,6 +64,11 @@ jobs:
     name: Site bundle
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    # One run per commit at a time, and none is cancelled: two runs for one commit would both see
+    # no tag and both push it.
+    concurrency:
+      group: site-bundle-${{ github.sha }}
+      cancel-in-progress: false
 
     permissions:
       contents: read
