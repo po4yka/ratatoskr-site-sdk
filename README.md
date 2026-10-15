@@ -21,6 +21,9 @@ publications at run time through the anonymous Content Delivery API (workspace c
   reads the release and its pages through it.
 - The package is not on npm yet, and `package.json` is `private`. Until it is published, the
   template builds only inside this repository, where it takes the types from `src/`.
+- The package also gives a site the owner mode of SITE-027 (`add-site-owner-editing-and-live`): the
+  owner sign-in, the live event stream and the editing helpers. See "Owner mode" below. Their
+  types come from the Platform API description and from `sites/site-event.v1`.
 - Hosting a site on the Ratatoskr host comes with SITE-026 (`add-site-gateway-hosting`).
 
 ## Start a site from the template
@@ -84,8 +87,8 @@ approved manifest and the active manifest name, with the approved hostname:
 | `library.read` | Owner session | Read the owner's knowledge library |
 | `knowledge.search` | Owner session | Search across the owner's knowledge, not only the publication |
 
-Only the first four are public. The other four need an owner session, which SITE-027 delivers, so
-today they grant nothing. The template uses `pages.read` and `assets.read`.
+Only the first four are public. The other four need the owner session of the site (see "Owner
+mode"). The template uses `pages.read` and `assets.read`.
 
 A public capability that the site did not request, a site that has no approval and a site whose
 approval you withdrew all answer `404 sites.site_not_found`, the same answer as a site that does
@@ -108,3 +111,48 @@ only the allowed frontmatter fields, and only the attachments that a published p
 Public answers can come from a shared cache: the release, page and search routes for up to 60
 seconds, and the asset route for up to 3600 seconds. When you withdraw an approval, all public
 content of the site stops within 3600 seconds, also in a shared cache.
+
+## The reserved path `/.ratatoskr/`
+
+`/.ratatoskr/` is reserved for the pages of the SDK. The template ships
+`.ratatoskr/sign-in/index.html`, the callback page of the owner sign-in. Keep it in every bundle,
+and put no other page under that path. The sites gateway serves `/.ratatoskr/*` with `no-store`
+and with no entry fallback, so a bundle without the page makes the sign-in fail, not open the home
+page.
+
+## Owner mode
+
+The owner of a site can sign in on the site, follow live events and edit the source notes of the
+site's publications. The site must request the capabilities in its manifest, and you must approve
+them: `live.release` for the event stream, `draft.read` to read sources and conflicts, and
+`notes.edit` to edit.
+
+1. **Sign in.** Call `beginSignIn({ site, webUrl, returnPath })` from a button, and go to the
+   address that it gives back with `location.assign`. `webUrl` is the origin of your Ratatoskr web
+   client. The function keeps a PKCE verifier in `sessionStorage` of the site only. In the web
+   client you confirm the site, its hostname and its capabilities. The web client then opens
+   `/.ratatoskr/sign-in/?code=...`, where `completeSignIn` removes the code from the address, posts
+   it with the verifier, and gives back the path to return to. The answer sets the cookie
+   `__Host-ratatoskr-site`, which the page cannot read. The session ends 12 hours after the
+   sign-in, or 1 hour after its last use. You can revoke it in the session list of the web client.
+2. **Follow events.** `openSiteEvents({ baseUrl: '/_r', site, onEvent, onResync })` reads
+   `GET /v1/sites/{site}/events`. A visitor receives `release.published`; the owner also receives
+   `draft.changed`, `edit.completed` and `edit.conflicted`. After a break the client reconnects
+   with the id of the last event. When Edge no longer has the events after it, the client calls
+   `onResync`, and the site must fetch its state again.
+3. **Edit.** `createOwnerClient({ baseUrl: '/_r', site })` reads a source with `draftPage(slug)`
+   or `draftSource(sourceRef)`; the answer holds the Markdown, the `source_ref` and the
+   `revision`. `edit({ sourceRef, baseHash: revision, markdown })` uploads the content (at most
+   16 MiB) and then posts the edit, which names only the stored blob. It gives back an operation
+   id. The edit is done when the event stream sends `edit.completed` for that operation;
+   `editOutcome(event)` turns the event into a typed result. On `edit.conflicted`, read the
+   versions with `conflict(conflictId)`, and send a new edit whose `baseHash` is the current
+   revision.
+
+Every owner request is same-origin, and each state change carries `X-Ratatoskr-Site-Request: 1`.
+Platform refuses a state change without that header or with an `Origin` other than your approved
+hostname. A failed owner request throws a `SiteApiError` with the status and the code of the error,
+for example 403 `edge.capability_not_granted` when the approval does not grant the capability.
+
+An edit does not publish anything. A publication with the release mode `automatic` builds a new
+release from the change; with `manual`, visitors see the previous release until you request one.

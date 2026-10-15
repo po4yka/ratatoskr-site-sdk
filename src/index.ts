@@ -65,3 +65,18 @@ export type {
 } from './contracts/sites/site-event.v1.js';
 export { openSiteEvents } from './live/events.js';
 export type { SiteEvents, SiteEventsOptions, SiteNotice } from './live/events.js';
+export { createOwnerClient, editOutcome, maxContentBytes } from './owner/edit.js';
+export type {
+  BlobRef,
+  EditOutcome,
+  EditRequest,
+  OwnerClient,
+  OwnerClientOptions,
+  SiteBlobUploaded,
+  SiteConflict,
+  SiteConflictTexts,
+  SiteDraft,
+  SiteEditAccepted,
+  SiteEditRequest,
+  SiteMergeProposal,
+} from './owner/edit.js';

@@ -10,7 +10,12 @@ in the package or in a site bundle.
 Baseline:
 
 - The template reads only the anonymous delivery routes under `/v1/sites/{site}/content/`. It sends
-  no cookie and no `Authorization` header.
+  no cookie and no `Authorization` header. The one exception is the reserved sign-in page
+  `.ratatoskr/sign-in/`, which posts the sign-in code to `/v1/sites/{site}/sessions`.
+- The owner mode of the package keeps the PKCE verifier in `sessionStorage` only, removes the
+  sign-in code from the address before it posts it, never reads the owner cookie, and sends
+  `X-Ratatoskr-Site-Request: 1` with every state change. An edit sends the content as a blob first,
+  and the edit names only the blob.
 - The template renders a page from its `ast` with DOM nodes and text. It does not insert the `html`
   member of a page, and it does not use `innerHTML`, `outerHTML`, `insertAdjacentHTML` or
   `document.write` for content.
