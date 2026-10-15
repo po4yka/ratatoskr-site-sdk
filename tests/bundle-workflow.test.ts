@@ -56,4 +56,57 @@ describe('the publish step', () => {
     expect(written).toContain('attest=false\n');
     expect(written).toContain(`digest=${existing}\n`);
   });
+
+  // SITE-026 review M2: only a not-found answer means that the tag is absent.
+  it('stops when oras cannot tell whether the tag exists', async () => {
+    const dir = await buildOutput();
+    dirs = [dir];
+    const cli = fakeCli({
+      env: { GITHUB_SHA: commit },
+      exec: (call) =>
+        call.args[0] === 'manifest'
+          ? failed(
+              `Error: failed to fetch the content of "${image}:sha-${commit}": 500 Internal Server Error`,
+            )
+          : ok(`${existing}\n`),
+    });
+    // A manifest exists, so the step could push.
+    const manifest = ['--site', 'docs', '--repository', 'owner/docs-site', '--commit', commit];
+    expect(await run(['bundle', 'manifest', '--dir', dir, ...manifest], cli.deps)).toBe(0);
+
+    const code = await run(
+      ['bundle', 'publish', '--dir', dir, '--image', image, '--commit', commit],
+      cli.deps,
+    );
+
+    expect(cli.calls.filter((call) => call.args[0] === 'push')).toEqual([]);
+    expect(code).not.toBe(0);
+    expect(cli.err.join('\n')).toContain('500 Internal Server Error');
+  });
+
+  it('pushes when oras answers that the tag is not found', async () => {
+    const dir = await buildOutput();
+    const outputs = await mkdtemp(join(tmpdir(), 'ratatoskr-github-output-'));
+    dirs = [dir, outputs];
+    const githubOutput = join(outputs, 'output');
+    const pushed = `sha256:${'f'.repeat(64)}`;
+    const cli = fakeCli({
+      env: { GITHUB_SHA: commit, GITHUB_OUTPUT: githubOutput },
+      exec: (call) =>
+        call.args[0] === 'manifest'
+          ? failed(`Error: ${image}:sha-${commit}: not found`)
+          : ok(`${pushed}\n`),
+    });
+    const manifest = ['--site', 'docs', '--repository', 'owner/docs-site', '--commit', commit];
+    expect(await run(['bundle', 'manifest', '--dir', dir, ...manifest], cli.deps)).toBe(0);
+
+    const code = await run(
+      ['bundle', 'publish', '--dir', dir, '--image', image, '--commit', commit],
+      cli.deps,
+    );
+
+    expect(cli.calls.map((call) => call.args[0])).toEqual(['manifest', 'push']);
+    expect(code).toBe(0);
+    expect(await readFile(githubOutput, 'utf8')).toContain(`digest=${pushed}\nattest=true\n`);
+  });
 });
