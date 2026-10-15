@@ -3,7 +3,9 @@ import { parseArgs } from 'node:util';
 import { type ManifestOptions, writeBundleManifest } from './bundle-manifest.js';
 import { CliError } from './bundle-paths.js';
 import { publishBundle, type PublishOptions } from './bundle-publish.js';
+import { deploy } from './deploy.js';
 import type { CliDeps } from './deps.js';
+import { login } from './login.js';
 
 // `ratatoskr-site`: the steps of the reusable bundle workflow, and the commands of the owner.
 
@@ -60,6 +62,8 @@ function publishOptions(args: string[]): PublishOptions {
 const commands: Record<string, (args: string[], deps: CliDeps) => Promise<number>> = {
   'bundle manifest': (args, deps) => writeBundleManifest(manifestOptions(args), deps),
   'bundle publish': (args, deps) => publishBundle(publishOptions(args), deps),
+  login,
+  deploy,
 };
 
 // The exit status: 0 on success, 1 when the command fails, and 2 for an unknown command.
