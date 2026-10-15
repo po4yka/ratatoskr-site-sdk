@@ -1,0 +1,19 @@
+<!doctype html>
+<!--
+  The sign-in callback of the site owner (SITE-027). `/.ratatoskr/` is reserved for the pages of
+  the SDK: keep this page in every bundle, and do not put another page under that path.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- The address of this page holds the sign-in code, so the page sends no referrer. -->
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex" />
+    <title>Sign in</title>
+  </head>
+  <body>
+    <main id="app"><p>Signing in.</p></main>
+    <script type="module" src="/src/sign-in.ts"></script>
+  </body>
+</html>

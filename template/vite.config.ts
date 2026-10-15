@@ -25,4 +25,14 @@ export default defineConfig({
     alias: { '@ratatoskr/site-sdk': fileURLToPath(new URL('../src/index.ts', import.meta.url)) },
   },
   define: { __RATATOSKR_SITE_ID__: JSON.stringify(siteId) },
+  build: {
+    rolldownOptions: {
+      // Two pages: the site, and the sign-in callback under the reserved path `/.ratatoskr/`,
+      // which every bundle built from this template ships (SITE-027).
+      input: {
+        main: fileURLToPath(new URL('index.html', import.meta.url)),
+        signIn: fileURLToPath(new URL('.ratatoskr/sign-in/index.html', import.meta.url)),
+      },
+    },
+  },
 });
