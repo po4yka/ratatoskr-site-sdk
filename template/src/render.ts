@@ -26,6 +26,26 @@ function textElement(tag: string, text: string): HTMLElement {
   return created;
 }
 
+// A page is checked against its contract by the sites service before it is served, and the contract
+// already refuses other schemes. This is the second check, at the place that sets the address.
+const linkSchemes: ReadonlySet<string> = new Set(['https:', 'http:', 'mailto:']);
+const imageSchemes: ReadonlySet<string> = new Set(['https:', 'http:']);
+
+function hasScheme(url: string, schemes: ReadonlySet<string>): boolean {
+  try {
+    return schemes.has(new URL(url).protocol);
+  } catch {
+    // A relative or malformed address has no scheme to allow.
+    return false;
+  }
+}
+
+function plain(children: readonly PageNode[]): Node {
+  const fragment = document.createDocumentFragment();
+  fragment.append(...renderNodes(children));
+  return fragment;
+}
+
 function link(href: string, children: readonly PageNode[]): HTMLAnchorElement {
   const anchor = element('a', children) as HTMLAnchorElement;
   anchor.href = href;
@@ -88,6 +108,7 @@ function code(node: NodeOf<'code'>): Node {
 }
 
 function image(node: NodeOf<'image'>): Node {
+  if (!hasScheme(node.url, imageSchemes)) return document.createTextNode(node.alt ?? '');
   const created = document.createElement('img');
   created.src = node.url;
   created.alt = node.alt ?? '';
@@ -132,6 +153,7 @@ const renderers: Renderers = {
   inlineCode: (node) => textElement('code', node.value),
   break: () => document.createElement('br'),
   link: (node) => {
+    if (!hasScheme(node.url, linkSchemes)) return plain(node.children);
     const anchor = link(node.url, node.children);
     if (node.title) anchor.title = node.title;
     return anchor;

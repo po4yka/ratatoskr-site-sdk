@@ -16,3 +16,10 @@ export function renderPage(page: Page): Node {
   view.append(nav, article);
   return view;
 }
+
+// The view for a route that names no page that the template can read.
+export function renderNotFound(): Node {
+  const message = document.createElement('p');
+  message.textContent = 'This page does not exist.';
+  return message;
+}

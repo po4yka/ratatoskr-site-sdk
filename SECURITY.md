@@ -16,7 +16,11 @@ Baseline:
   `document.write` for content.
 - A link, an image and an embed get their address from the page. The contract refuses a
   `javascript:` or `data:` address, and the sites service enforces the contract before it serves a
-  page.
+  page. The template checks again: it sets `href` from a link only for `https`, `http` and
+  `mailto`, and `src` from an image only for `https` and `http`. Another address renders as text.
+- The template reads a page only for a route slug of the contract grammar. A `.`, `..` or empty
+  segment shows the not-found view and sends no request, so URL normalisation cannot turn a route
+  into another delivery route.
 - The package has no runtime dependency, no remote code and no `eval`.
 - The contract types and the fixtures are byte-exact copies from `ratatoskr-contracts`, checked
   against the digests in `contracts/contracts.lock.json`.
