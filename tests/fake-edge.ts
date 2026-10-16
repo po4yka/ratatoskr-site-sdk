@@ -18,6 +18,11 @@ export const device = {
 };
 export const signerWorkflow =
   'po4yka/ratatoskr-site-sdk/.github/workflows/reusable-site-bundle.yml';
+export const signerCommit = '89331e6aa0b845c3565c1d9785b0dd5038e2de81';
+export const attestationBundle = {
+  mediaType: 'application/vnd.dev.sigstore.bundle.v0.3+json',
+  fixture: 'untrusted',
+};
 const later = '2026-10-15T21:00:00Z';
 
 // A bundle of the fixture build output whose manifest names `site`.
@@ -53,7 +58,9 @@ export function tools(bundle: { tar: Uint8Array; attested: boolean }) {
       return ok();
     }
     if (call.command === 'gh') {
-      return bundle.attested ? ok() : failed('Error: no attestation matches the digest');
+      return bundle.attested
+        ? ok(JSON.stringify([{ attestation: { bundle: attestationBundle } }]))
+        : failed('Error: no attestation matches the digest');
     }
     return failed(`unexpected ${call.command}`);
   };

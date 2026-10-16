@@ -167,6 +167,19 @@ A site is served on the Ratatoskr host from a static bundle: a tar archive of th
 file with its size and SHA-256, and marks the content-hashed files, which the gateway caches for a
 year.
 
+Before approval, set `github_repository` in the site manifest to the real lower-case GitHub
+`owner/name` and its numeric repository ID, as a string. The owner sees both values before approval.
+A changed binding needs a new approval. Public GitHub repositories and public GHCR packages are
+supported. To read the identity of your repository, use
+`gh api repos/OWNER/REPO --jq '{repository: (.full_name | ascii_downcase), repository_id: (.id | tostring)}'`.
+The public SDK fixture uses this binding:
+
+```toml
+[github_repository]
+repository = "po4yka/ratatoskr-site-sdk"
+repository_id = "1420131953"
+```
+
 1. **Publish a bundle per commit.** Call the reusable workflow from the site repository on a push
    to its default branch. Pin it to a commit of this repository, and keep `@ratatoskr/site-sdk` in
    the site's lockfile at the same version, because the workflow runs the steps of that package:
@@ -183,7 +196,7 @@ year.
          packages: write
          id-token: write
          attestations: write
-       uses: po4yka/ratatoskr-site-sdk/.github/workflows/reusable-site-bundle.yml@<commit>
+       uses: po4yka/ratatoskr-site-sdk/.github/workflows/reusable-site-bundle.yml@89331e6aa0b845c3565c1d9785b0dd5038e2de81
        with:
          site-id: docs
    ```
@@ -201,14 +214,18 @@ year.
    Service through `secret-tool` on Linux), never in the site repository. You can revoke the device
    in the device list of the web client.
 3. **Deploy a commit.** Run `npx ratatoskr-site deploy --site docs --commit <sha>` in the site
-   repository. It needs `oras` and `gh`. It verifies the attestation of the artifact against the
-   site repository, the commit and the reusable workflow, and checks every file against the
-   manifest, before it sends a byte to Ratatoskr. Then it uploads the bundle and activates it. With
-   `--no-activate` it uploads only; deploy the same commit again to activate it later. To roll
-   back, deploy the previous commit: the host keeps it, so nothing is downloaded again.
+   repository. It needs `oras` 1.3.0 and `gh` 2.102.0. It verifies the artifact against the site repository,
+   source commit and exact reusable workflow revision, then checks the archive files. It sends
+   at most 1 MiB of JSON with the source commit, immutable artifact SHA-256 and untrusted Sigstore
+   proof. The server independently verifies the proof and fetches the artifact from the approved
+   repository. It activates the stored bundle unless `--no-activate` is set.
+
+   The deploy command repeats artifact verification on each call. The host can activate an already
+   verified stored commit through `POST /v1/sites/{site}/deploys/{commit}/activate` without a registry
+   download. Current approval and policy still apply to that rollback.
    `--repository owner/name` names the repository when the remote `origin` is not on GitHub.
 
-If the attestation check fails for a commit, the tag is not trusted and the command sends nothing.
-A tag never moves, so running the workflow again does not replace it. Delete that package version
-of `ghcr.io/<owner>/<repository>` in the package settings of GitHub, then run the workflow again
-for the commit. It pushes and attests a new bundle, and you can deploy it.
+The server permits the workflow revision shown above. Move that pin and the server policy together
+in a reviewed change. A failed proof, foreign repository ID, changed digest or unapproved binding
+refuses deployment. A different digest for a stored commit is a conflict. Publish a new commit after
+fixing the build or policy problem; the existing artifact and stored proof remain immutable.

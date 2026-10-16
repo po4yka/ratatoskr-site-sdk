@@ -9,3 +9,7 @@ publications = ["handbook"]
 # The public capabilities that this template uses. `search.publication` and `live.release` are also
 # public; the other four need an owner session and grant nothing to a visitor.
 capabilities = ["pages.read", "assets.read"]
+
+# Before approval, add [github_repository] with your real lower-case owner/name and numeric
+# repository_id as a string. README.md shows how to read both values. This delivery fixture
+# omits the binding; it cannot be approved for new deployments until you set it.

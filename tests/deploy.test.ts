@@ -15,6 +15,8 @@ import {
   image,
   repository,
   signerWorkflow,
+  signerCommit,
+  attestationBundle,
   stubEdge,
   tools,
 } from './fake-edge.js';
@@ -78,8 +80,12 @@ describe('ratatoskr-site deploy', () => {
       ['POST', `/v1/sites/docs/deploys/${commit}/activate`, 'Bearer device-session-1'],
     ]);
     expect(code).toBe(0);
-    expect(siteRequests[0]?.contentType).toBe('application/x-tar');
-    expect(Buffer.from(siteRequests[0]?.body as Uint8Array).equals(Buffer.from(tar))).toBe(true);
+    expect(siteRequests[0]?.contentType).toBe('application/json');
+    expect(JSON.parse(String(siteRequests[0]?.body))).toEqual({
+      commit,
+      artifact_sha256: digest.slice('sha256:'.length),
+      attestation_bundle: attestationBundle,
+    });
     // The device session comes from the root secret in the credential store, first of all.
     expect(edge.requests[0]?.path).toBe('/v1/sessions/device');
     expect(JSON.parse(String(edge.requests[0]?.body))).toEqual({
@@ -97,7 +103,16 @@ describe('ratatoskr-site deploy', () => {
       commit,
       '--signer-workflow',
       signerWorkflow,
+      '--signer-digest',
+      signerCommit,
       '--deny-self-hosted-runners',
+      '--bundle-from-oci',
+      '--cert-oidc-issuer',
+      'https://token.actions.githubusercontent.com',
+      '--predicate-type',
+      'https://slsa.dev/provenance/v1',
+      '--format',
+      'json',
     ]);
   });
 });

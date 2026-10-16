@@ -4,6 +4,7 @@ import { join } from 'node:path';
 
 import type { DeployActivated } from '../contracts/sites/deploy-activated.v1.js';
 import type { DeployStored } from '../contracts/sites/deploy-stored.v1.js';
+import type { DeployRequest } from '../contracts/sites/deploy-request.v1.js';
 import { checkedBundle, type ExpectedBundle } from './bundle-check.js';
 import {
   bundleFileName,
@@ -13,16 +14,14 @@ import {
   repositoryPattern,
 } from './bundle-paths.js';
 import type { CliDeps } from './deps.js';
+import { verifiedProof } from './deploy-proof.js';
 import { checkedSite, edgeJson, openDeviceSession, storedDevice } from './edge.js';
 
 // `ratatoskr-site deploy --site <site> --commit <sha> [--repository <owner/name>] [--no-activate]`
 // (workspace change `add-site-gateway-hosting`, design D3). On the machine where it runs, it
 // resolves `sha-<commit>` to a digest, verifies the attestation of that digest against the site
 // repository, the commit and the reusable bundle workflow, pulls that digest and checks every file
-// against the manifest. Only then does it open a device session, upload the bundle and activate it.
-
-export const signerWorkflow =
-  'po4yka/ratatoskr-site-sdk/.github/workflows/reusable-site-bundle.yml';
+// against the manifest. Only then does it open a device session and send the immutable request.
 
 export interface DeployOptions {
   site: string;
@@ -57,10 +56,7 @@ async function originRepository(deps: CliDeps): Promise<string> {
 }
 
 // The bytes of the bundle, after every check.
-async function verifiedArchive(
-  expected: ExpectedBundle,
-  deps: CliDeps,
-): Promise<Uint8Array<ArrayBuffer>> {
+async function verifiedArchive(expected: ExpectedBundle, deps: CliDeps): Promise<DeployRequest> {
   const image = `ghcr.io/${expected.repository.toLowerCase()}`;
   const tag = `${image}:sha-${expected.commit}`;
   const digest = await tool(deps, {
@@ -70,22 +66,7 @@ async function verifiedArchive(
   });
   if (!/^sha256:[0-9a-f]{64}$/.test(digest))
     throw new CliError(`oras resolved ${tag} to ${digest}.`);
-  await tool(deps, {
-    command: 'gh',
-    args: [
-      'attestation',
-      'verify',
-      `oci://${image}@${digest}`,
-      '--repo',
-      expected.repository,
-      '--source-digest',
-      expected.commit,
-      '--signer-workflow',
-      signerWorkflow,
-      '--deny-self-hosted-runners',
-    ],
-    failure: `The attestation of ${image}@${digest} is not valid`,
-  });
+  const proof = await verifiedProof({ expected, reference: `${image}@${digest}` }, deps);
   const dir = await mkdtemp(join(tmpdir(), 'ratatoskr-site-deploy-'));
   try {
     await tool(deps, {
@@ -95,7 +76,11 @@ async function verifiedArchive(
     });
     const archive = new Uint8Array(await readFile(join(dir, bundleFileName)));
     checkedBundle(archive, expected);
-    return archive;
+    return {
+      commit: expected.commit,
+      artifact_sha256: digest.slice('sha256:'.length),
+      attestation_bundle: proof,
+    };
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -109,15 +94,16 @@ export async function deploy(options: DeployOptions, deps: CliDeps): Promise<num
     pattern: repositoryPattern,
   });
   const device = await storedDevice(site, deps);
-  const archive = await verifiedArchive({ site, commit, repository }, deps);
+  const body = JSON.stringify(await verifiedArchive({ site, commit, repository }, deps));
+  if (Buffer.byteLength(body) > 1024 * 1024) throw new CliError('The deploy proof exceeds 1 MiB.');
   const authorization = `Bearer ${await openDeviceSession(device, deps)}`;
   const deploys = `${device.api}/v1/sites/${site}/deploys`;
   const stored = await edgeJson<DeployStored>(deps, {
     url: deploys,
     init: {
       method: 'POST',
-      headers: { Authorization: authorization, 'Content-Type': 'application/x-tar' },
-      body: archive,
+      headers: { Authorization: authorization, 'Content-Type': 'application/json' },
+      body,
     },
     status: [200, 201],
   });
