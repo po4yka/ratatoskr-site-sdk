@@ -1,6 +1,6 @@
 {
   "repository": "po4yka/ratatoskr-contracts",
-  "commit": "2c726027da79e0e899ad482afead0a2000b03e61",
+  "commit": "66bdb0c0545363f06137f13687084c21db9b27c5",
   "files": [
     {
       "path": "contracts/fixtures/sites/page/invalid/image-data-url.json",
@@ -88,6 +88,11 @@
       "sha256": "06f3e6b89da71cafe9fefabb29e95888ae153bb0a30c4476d4d375414e6edff1"
     },
     {
+      "path": "src/contracts/sites/deploy-request.v1.ts",
+      "source": "generated/typescript/json-schema/sites/deploy-request.v1.ts",
+      "sha256": "72bf187801578999bea5707f7411aecc046ee940d2c6df6ab555fcdf7948245b"
+    },
+    {
       "path": "src/contracts/sites/deploy-stored.v1.ts",
       "source": "generated/typescript/json-schema/sites/deploy-stored.v1.ts",
       "sha256": "f96784c5b0c55b516c9202238ff37c789c8dd72754f2d2c7416c87c7253ce020"
@@ -110,7 +115,7 @@
     {
       "path": "src/contracts/sites/site-manifest.v1.ts",
       "source": "generated/typescript/json-schema/sites/site-manifest.v1.ts",
-      "sha256": "b73e1f15406e08be1a25ad9d544c00e2dab6280e292b614d2c52be544277bfa8"
+      "sha256": "c195a72f8aae54489130936b28b4a9d0f2e6506b1f99305b75b75321c714d715"
     }
   ]
 }
