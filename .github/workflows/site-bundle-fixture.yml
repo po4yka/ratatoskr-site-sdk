@@ -1,0 +1,25 @@
+# A public synthetic bundle for SITE-028 integration. The source is this SDK and its starter
+# template; no vault data or credentials are placed in the artifact.
+name: site-bundle-fixture
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fixture:
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    uses: po4yka/ratatoskr-site-sdk/.github/workflows/reusable-site-bundle.yml@89331e6aa0b845c3565c1d9785b0dd5038e2de81
+    with:
+      site-id: provenance-fixture
+      build-command: npm run build
+      output-dir: template/dist
+      publish: true
