@@ -14,9 +14,9 @@ jobs:
   fixture:
     permissions:
       contents: read
-      packages: write
-      id-token: write
-      attestations: write
+      packages: write # Publish the public synthetic fixture to GHCR.
+      id-token: write # Sign provenance with the hosted runner identity.
+      attestations: write # Record the proof beside this fixture commit.
     uses: po4yka/ratatoskr-site-sdk/.github/workflows/reusable-site-bundle.yml@89331e6aa0b845c3565c1d9785b0dd5038e2de81
     with:
       site-id: provenance-fixture
