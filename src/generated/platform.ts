@@ -1187,6 +1187,8 @@ export interface components {
         ActiveSiteManifest: {
             /** @description The capabilities that the manifest requests. */
             capabilities: string[];
+            /** @description The canonical GitHub repository and immutable repository id of the manifest. */
+            github_repository?: components["schemas"]["GitHubRepositoryBinding"] | null;
             /** @description The hostname of the manifest. */
             hostname: string;
             /** @description The SHA-256 of the manifest bytes, 64 lower-case hex digits. The owner approves this digest. */
@@ -1698,6 +1700,35 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /**
+         * @description One repository whose signed builds the owner approves for a site.
+         *
+         *     Both fields are part of the manifest digest and the approval event. A changed name or id needs
+         *     a new owner approval. Absence in a legacy manifest grants no deploy authority.
+         */
+        GitHubRepositoryBinding: {
+            /** @description The canonical public GitHub repository name that the owner approves. */
+            repository: components["schemas"]["GitHubRepositoryName"];
+            /** @description Its immutable GitHub repository id; a reused name does not keep this identity. */
+            repository_id: components["schemas"]["GitHubRepositoryId"];
+        };
+        /**
+         * GitHubRepositoryId
+         * @description The immutable positive GitHub repository id, in decimal with no leading zero.
+         *
+         *     A string keeps the exact integer in generated JavaScript clients. This is public identity,
+         *     not a credential. Verification compares it with the signed certificate claim.
+         * @example 1420131804
+         */
+        GitHubRepositoryId: string;
+        /**
+         * GitHubRepositoryName
+         * @description The canonical lower-case GitHub repository in an approval, as `owner/name`.
+         *
+         *     It names one public GitHub repository. The numeric id also has to match its signed identity.
+         * @example owner/docs-site
+         */
+        GitHubRepositoryName: string;
         /**
          * InspectionCursor
          * @description Opaque service-generated pagination cursor.
@@ -2446,6 +2477,8 @@ export interface components {
         SiteApproval: {
             /** @description The capabilities of the approved manifest. */
             capabilities: string[];
+            /** @description The approved canonical GitHub repository and immutable repository id. */
+            github_repository?: components["schemas"]["GitHubRepositoryBinding"] | null;
             /** @description The hostname of the approved manifest. */
             hostname: string;
             /** @description The approved manifest digest. */
@@ -2828,8 +2861,9 @@ export interface components {
          *     `.obsidian` in any ASCII case.
          *
          *     Not empty, at most 1024 UTF-8 bytes, segments separated by `/`, no leading or trailing
-         *     `/`, no empty, `.` or `..` segment, no backslash and no C0 or DEL control character, so a
-         *     path can never name a file outside the vault. `.obsidian/` is the vault configuration, and
+         *     `/`, no empty, `.` or `..` segment, no colon or backslash, and no C0 or DEL control
+         *     character. No segment ends in a dot or an ASCII space. These rules keep names portable
+         *     across the supported vault adapters. A path can never name a file outside the vault. `.obsidian/` is the vault configuration, and
          *     Ratatoskr never writes it; a case-insensitive file system maps `.OBSIDIAN/` to the same
          *     folder, so every case is refused. The pattern spells the first segment without
          *     look-ahead: any segment, except one that starts with `.o` and continues with exactly
